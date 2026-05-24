@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Local dev storage from server/app.py
+server/_test_storage/
+**/_test_storage/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

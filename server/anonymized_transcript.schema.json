@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schema.functionland.dev/fula/ai-training/anonymized_transcript.v1.schema.json",
+  "title": "Anonymized troubleshooting transcript (intake server payload)",
+  "description": "Phase 20 contract. The Blox phone app emits this shape after stripping PII (peerIds, IPs, paths, SSIDs, BSSIDs, timestamps) per the Phase 21 anonymizer. The intake server's first defense is JSON Schema validation against this file — any deviation is rejected with a generic 400. Closed schema (additionalProperties:false) at every level so a deviant client cannot smuggle extra fields past us into the labelled corpus.",
+  "schema_version": 1,
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "upload_id",
+    "session_relative_start",
+    "events",
+    "user_rating",
+    "consent"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "description": "Bumped on breaking changes to this contract. Server refuses parsing unknown versions."
+    },
+    "upload_id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+      "description": "Client-supplied UUID v4 (lowercase). Used as the idempotency key — re-submitting the same upload_id within the dedup window returns the prior outcome without writing again. Server treats this as opaque."
+    },
+    "session_relative_start": {
+      "const": "+0s",
+      "description": "Anonymizer replaces all timestamps with relative offsets (per parent plan Layer 3.8c). The session always starts at +0s; this field is a tripwire — if a client forgets to convert it, validation fails."
+    },
+    "events": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {"$ref": "#/$defs/Event"},
+      "description": "Anonymized SSE event stream from the original /troubleshoot session. Includes thought + tool_call + tool_result + verdict + recommended_action + user_question + user_reply_received + execution_result + error variants, with payloads sanitized."
+    },
+    "user_rating": {
+      "enum": [-1, 0, 1],
+      "description": "User's end-of-session rating that triggered the upload offer."
+    },
+    "user_comment": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Optional. User's freeform comment from the feedback modal. Phone-side anonymizer should have stripped path/SSID-looking substrings; server scans defense-in-depth."
+    },
+    "consent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["explicit_opt_in", "preview_shown", "anonymizer_version"],
+      "properties": {
+        "explicit_opt_in": {
+          "const": true,
+          "description": "Tripwire. The phone app's preview-then-tap flow always sets true. A client sending false would mean the upload was triggered without consent — server rejects."
+        },
+        "preview_shown": {
+          "const": true,
+          "description": "Tripwire. The phone app shows the JSON payload to the user before sending; this confirms that step ran."
+        },
+        "anonymizer_version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver of the on-device anonymizer that produced this payload. Server logs this so the operator can correlate a wave of bad anonymizations back to a specific app version."
+        }
+      }
+    },
+    "device_class": {
+      "enum": ["rk3588"],
+      "description": "Optional. Only RK3588 devices today. Closed enum so future expansion is deliberate."
+    }
+  },
+  "$defs": {
+    "Event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "relative_ts"],
+      "properties": {
+        "type": {
+          "enum": [
+            "thought",
+            "tool_call",
+            "tool_result",
+            "verdict",
+            "recommended_action",
+            "execution_result",
+            "user_question",
+            "user_reply_received",
+            "error",
+            "session_started"
+          ]
+        },
+        "relative_ts": {
+          "type": "string",
+          "pattern": "^\\+\\d+(\\.\\d+)?s$",
+          "description": "Anonymized relative offset, e.g. '+12s'. Original wall-clock was stripped."
+        },
+        "payload": {
+          "description": "Per-type payload. Schema is intentionally loose at this level so the corpus can grow without an upload-server PR; defense-in-depth PII scanner enforces no-IP / no-SSID / no-peerId at runtime regardless of structure.",
+          "type": ["object", "string", "number", "boolean", "null"]
+        }
+      }
+    }
+  }
+}
