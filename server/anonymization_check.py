@@ -36,11 +36,11 @@ _IPV4_RE = re.compile(
     r"\b(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\b"
 )
 
-# IPv6: loose — any 2+ colon-separated hex groups of length 1-4. False
-# positives possible on hex-style identifiers, but the anonymizer should
-# have stripped those too. RFC-5952-correct parsing isn't worth the
-# complexity here.
-_IPV6_RE = re.compile(r"\b(?:[A-Fa-f0-9]{1,4}:){2,}[A-Fa-f0-9:]{1,}\b")
+# IPv6: handle full + compressed (`::`) forms. Middle group's `[hex]{0,4}`
+# allows zero-width matches for the `::` compression. Loose by design; the
+# anonymizer's matching regex is identical so they agree on what counts as
+# IPv6. RFC-5952-correct parsing isn't worth the complexity here.
+_IPV6_RE = re.compile(r"\b[A-Fa-f0-9]{1,4}(?::[A-Fa-f0-9]{0,4}){2,}\b")
 
 # libp2p peerIds start with 12D3KooW (Ed25519, post-2020). IPFS legacy CIDs
 # starting with Qm are base58 multihashes — also peerId-shaped. Both are

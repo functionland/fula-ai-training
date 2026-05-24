@@ -257,3 +257,31 @@ def test_persisted_file_has_no_request_metadata(client):
     assert len(files) == 1
     persisted = json.loads(files[0].read_text())
     assert persisted == body, "server MUST persist payload byte-for-byte; no augmentation"
+
+
+# ---------------------------------------------------------------------------
+# Cross-runtime drift gate (Phase 21 advisor catch)
+# ---------------------------------------------------------------------------
+
+def test_canonical_js_anonymizer_output_is_accepted(client):
+    """Hard contract between the JS on-device anonymizer (apps/box/src/utils/
+    anonymizeTranscript.ts) and this Python server. The fixture file is the
+    exact byte-shape the JS anonymizer produces for a canonical input; jest
+    has a sibling test in apps/box that asserts that side. If the JS shape
+    drifts, jest catches it. If the server schema drifts, this test catches
+    it. The two tests together prevent silent runtime mismatches.
+
+    If you change anonymized_transcript.schema.json OR
+    apps/box/src/utils/anonymizeTranscript.ts, update the fixture in both
+    repos and re-run both test suites.
+    """
+    fixture_path = Path(__file__).parent / "fixtures" / "canonical_js_anonymizer_output.json"
+    body = json.loads(fixture_path.read_text())
+    r = client.post("/transcripts", json=body)
+    assert r.status_code == 200, (
+        f"JS anonymizer output rejected by server (HTTP {r.status_code}). "
+        f"This means the JS anonymizer drifted from the server schema. "
+        f"Sync apps/box/src/utils/anonymizeTranscript.ts with "
+        f"server/anonymized_transcript.schema.json."
+    )
+    assert r.json() == {}
