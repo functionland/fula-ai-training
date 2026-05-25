@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -12,10 +13,24 @@ from publish.update_manifest import bump_manifest, verify_sha
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_FULA_OTA_SCHEMA = (
-    _REPO_ROOT.parent / "fula-ota" / "docker" / "fxsupport" / "linux"
-    / "plugins" / "blox-ai" / "api" / "ai_manifest.schema.json"
-)
+
+
+def _locate_schema() -> Path:
+    """Find the device-side ai_manifest.schema.json.
+
+    CI sets BLOX_AI_FULA_OTA_SCHEMA_DIR to the api/ dir of a checked-out
+    fula-ota; locally the test falls back to a sibling checkout at
+    `../fula-ota/...` so a developer with both repos cloned side-by-side
+    gets the same cross-repo verification without setting anything.
+    """
+    env_dir = os.environ.get("BLOX_AI_FULA_OTA_SCHEMA_DIR")
+    if env_dir:
+        return Path(env_dir) / "ai_manifest.schema.json"
+    return (_REPO_ROOT.parent / "fula-ota" / "docker" / "fxsupport" / "linux"
+            / "plugins" / "blox-ai" / "api" / "ai_manifest.schema.json")
+
+
+_FULA_OTA_SCHEMA = _locate_schema()
 
 
 def _entry(version="2026-06-01", sha=None):
