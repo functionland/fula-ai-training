@@ -1,0 +1,29 @@
+id: partial_data_001
+description: diag/storage failed (e.g. smartctl unavailable). Model must still finalize a verdict on the data it has.
+
+user_prompt: |
+  Anything wrong?
+
+canned_diag_responses:
+  diag/summary:
+    overall: yellow
+    subsystems:
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: yellow}  # eval will return error when model calls diag/storage
+      wireguard:  {status: green}
+      heartbeat:  {status: green}
+      relay:      {status: green}
+  diag/storage:
+    _error: subprocess unavailable
+
+expected:
+  severity: yellow
+  root_cause_keywords: [storage, partial, unable, error, unavailable]
+  recommended_actions: []  # Insufficient data to confidently recommend an action
+
+hard_rules:
+  max_tool_calls: 4
+  no_whitelist_violations: true

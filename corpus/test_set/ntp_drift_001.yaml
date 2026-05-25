@@ -1,0 +1,34 @@
+id: ntp_drift_001
+description: Clock unsynced. Most fula services depend on accurate timestamps. ntp.resync should fix.
+
+user_prompt: |
+  Lots of things seem broken.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      time:       {status: red, key_metrics: {synced: false}}
+      internet:   {status: green}
+      heartbeat:  {status: yellow}
+      relay:      {status: yellow}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: yellow}
+  diag/time:
+    synced: false
+    offset_ms: 0
+    service: systemd-timesyncd
+
+expected:
+  severity: red
+  root_cause_keywords: [time, clock, ntp, sync, unsync]
+  recommended_actions:
+    - action_name: ntp.resync
+      args: {}
+      tier: 2
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

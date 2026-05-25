@@ -1,0 +1,39 @@
+id: kubo_hang_001
+description: Kubo container has been restart-looping; AI should diagnose + recommend docker.restart on ipfs_host.
+
+user_prompt: |
+  My device says it's connected but the app can't reach any files. It's been like this for an hour.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      containers: {status: red, key_metrics: {oom_count: 0, running_count: 5}}
+      internet:   {status: green, key_metrics: {discovery_https_ok: true}}
+      time:       {status: green, key_metrics: {synced: true}}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green, key_metrics: {active: true}}
+      heartbeat:  {status: yellow, key_metrics: {http_status: 0}}
+      relay:      {status: yellow, key_metrics: {reservation_count: 0}}
+  diag/containers:
+    containers:
+      - {name: ipfs_host, state: running, oom_killed: false, restart_count: 7}
+      - {name: ipfs_cluster, state: running, oom_killed: false, restart_count: 0}
+      - {name: fula_go, state: running, restart_count: 0}
+  diag/heartbeat:
+    last_attempt_ts: "2026-05-20T10:00:00Z"
+    http_status: 0
+    error: connection timed out
+
+expected:
+  severity: red
+  root_cause_keywords: [kubo, ipfs_host, wedge, hang, restart, stuck]
+  recommended_actions:
+    - action_name: docker.restart
+      args: {container: ipfs_host}
+      tier: 2
+
+hard_rules:
+  max_tool_calls: 4
+  no_whitelist_violations: true

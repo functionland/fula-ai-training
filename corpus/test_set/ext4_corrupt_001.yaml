@@ -1,0 +1,32 @@
+id: ext4_corrupt_001
+description: ext4 reports errors on the uniondrive disk. Storage hardware or filesystem issue. Recommend operator action; no auto-fix available.
+
+user_prompt: |
+  My device is acting really weird, files seem to come and go.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      storage:    {status: red, key_metrics: {ext4_errors: 42, dmesg_io_errors_1h: 7}}
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: yellow, key_metrics: {running_count: 4, oom_count: 0}}
+      power:      {status: green}
+      wireguard:  {status: green}
+      heartbeat:  {status: green}
+      relay:      {status: green}
+  diag/storage:
+    df: {}
+    ext4_errors_count: 42
+    dmesg_io_errors_1h: 7
+    smartctl_health: unknown
+
+expected:
+  severity: red
+  root_cause_keywords: [ext4, storage, filesystem, disk, corruption, errors]
+  recommended_actions: []  # No safe auto-fix; operator must inspect
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

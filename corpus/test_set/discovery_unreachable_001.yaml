@@ -1,0 +1,33 @@
+id: discovery_unreachable_001
+description: discovery.fula.network HTTPS blocked at network level (corp firewall, country-level). Not captive; not local issue.
+
+user_prompt: |
+  My blox can't be found by my phone anymore. It was working yesterday.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      internet:   {status: red, key_metrics: {discovery_https_ok: false, captive_portal_likely: false, latency_ms_avg: 85}}
+      time:       {status: green}
+      heartbeat:  {status: red}
+      relay:      {status: red}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green}
+  diag/internet:
+    dns_ok: true
+    https_google_ok: true
+    https_discovery_ok: false
+    latency_ms_avg: 85
+    captive_portal_likely: false
+
+expected:
+  severity: red
+  root_cause_keywords: [discovery, blocked, firewall, network, unreachable, isp]
+  recommended_actions: []  # restart_fula won't fix a network-level block; just inform
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

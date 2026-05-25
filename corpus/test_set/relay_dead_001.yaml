@@ -1,0 +1,33 @@
+id: relay_dead_001
+description: Zero circuit reservations. The libp2p relays our device announces through are unreachable. Bounce wireguard (relay traffic flows over it) + retry.
+
+user_prompt: |
+  No one can reach my blox.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      relay:      {status: red, key_metrics: {reservation_count: 0, peer_count: 0}}
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: yellow, key_metrics: {active: false}}
+      heartbeat:  {status: yellow}
+  diag/relay:
+    relays: []
+    reservation_count: 0
+
+expected:
+  severity: red
+  root_cause_keywords: [relay, libp2p, reservation, circuit, unreachable]
+  recommended_actions:
+    - action_name: wireguard.bounce
+      args: {}
+      tier: 2
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

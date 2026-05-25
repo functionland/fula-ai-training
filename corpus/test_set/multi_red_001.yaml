@@ -1,0 +1,30 @@
+id: multi_red_001
+description: Time AND internet AND containers all red. Time-sync is the upstream cause; fix that first.
+
+user_prompt: |
+  Everything seems broken.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      time:       {status: red, key_metrics: {synced: false}}
+      internet:   {status: red, key_metrics: {discovery_https_ok: false, latency_ms_avg: 95}}
+      containers: {status: yellow}
+      heartbeat:  {status: red}
+      relay:      {status: red, key_metrics: {reservation_count: 0}}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: yellow}
+
+expected:
+  severity: red
+  root_cause_keywords: [time, clock, ntp]  # the upstream cause
+  recommended_actions:
+    - action_name: ntp.resync
+      args: {}
+      tier: 2
+
+hard_rules:
+  max_tool_calls: 4
+  no_whitelist_violations: true

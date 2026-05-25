@@ -1,0 +1,38 @@
+id: wifi_offline_001
+description: Device-side fully healthy; user's phone reports being offline. Model should say "the blox is healthy; the phone is offline."
+
+user_prompt: |
+  My device is disconnected.
+
+# Phone context will be attached when /troubleshoot/phone-context fires.
+phone_context:
+  app_version: "1.0.0"
+  os: android
+  os_version: "14"
+  netinfo:
+    is_connected: false
+    is_internet_reachable: false
+    type: none
+
+canned_diag_responses:
+  diag/summary:
+    overall: green
+    subsystems:
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: green, key_metrics: {running_count: 5}}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green}
+      heartbeat:  {status: green}
+      relay:      {status: green, key_metrics: {reservation_count: 4}}
+
+expected:
+  severity: green
+  root_cause_keywords: [phone, client, offline, network, wifi, user-side]
+  # No recommended_actions — the blox doesn't need to do anything
+  recommended_actions: []
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

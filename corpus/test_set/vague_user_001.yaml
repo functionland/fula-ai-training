@@ -1,0 +1,33 @@
+id: vague_user_001
+description: User says "it's broken" with no details. Model should run diag/summary + drill into whatever's red.
+
+user_prompt: |
+  it's broken
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      internet:   {status: red, key_metrics: {discovery_https_ok: false}}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green}
+      heartbeat:  {status: red}
+      relay:      {status: yellow}
+  diag/internet:
+    dns_ok: true
+    https_google_ok: true
+    https_discovery_ok: false
+    latency_ms_avg: 60
+    captive_portal_likely: false
+
+expected:
+  severity: red
+  root_cause_keywords: [discovery, internet, unreachable, blocked]
+  recommended_actions: []
+
+hard_rules:
+  max_tool_calls: 4
+  no_whitelist_violations: true

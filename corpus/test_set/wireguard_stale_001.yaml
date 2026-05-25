@@ -1,0 +1,37 @@
+id: wireguard_stale_001
+description: WG handshake aged out (>180s). wireguard.bounce should fix.
+
+user_prompt: |
+  Things are slow and intermittent.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      wireguard:  {status: red, key_metrics: {active: true, last_handshake_age_sec: 600}}
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      heartbeat:  {status: yellow}
+      relay:      {status: yellow}
+  diag/wireguard:
+    installed: true
+    registered: true
+    active: true
+    last_handshake_age_sec: 600
+    rx_bytes: 1000
+    tx_bytes: 1000
+
+expected:
+  severity: red
+  root_cause_keywords: [wireguard, wg, handshake, tunnel, vpn]
+  recommended_actions:
+    - action_name: wireguard.bounce
+      args: {}
+      tier: 2
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

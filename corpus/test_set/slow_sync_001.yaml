@@ -1,0 +1,33 @@
+id: slow_sync_001
+description: Discovery reachable but very slow (latency >2s). Not a hard fault; cosmetic / quality-of-service issue.
+
+user_prompt: |
+  Sync feels really slow today.
+
+canned_diag_responses:
+  diag/summary:
+    overall: yellow
+    subsystems:
+      internet:   {status: yellow, key_metrics: {discovery_https_ok: true, latency_ms_avg: 2400}}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green}
+      heartbeat:  {status: green}
+      relay:      {status: green}
+  diag/internet:
+    dns_ok: true
+    https_google_ok: true
+    https_discovery_ok: true
+    latency_ms_avg: 2400
+    captive_portal_likely: false
+
+expected:
+  severity: yellow
+  root_cause_keywords: [latency, slow, network, congestion]
+  recommended_actions: []  # No fix from blox side; network is the bottleneck
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

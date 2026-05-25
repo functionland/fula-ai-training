@@ -1,0 +1,32 @@
+id: undervoltage_001
+description: RK3588 undervoltage events in last 24h. Power-supply / cable issue. No software fix; user must check cable/PSU.
+
+user_prompt: |
+  My device keeps rebooting on its own.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      power:      {status: red, key_metrics: {uptime_s: 1200, undervoltage_events_24h: 5}}
+      internet:   {status: green}
+      time:       {status: green}
+      containers: {status: yellow}
+      storage:    {status: green}
+      wireguard:  {status: green}
+      heartbeat:  {status: green}
+      relay:      {status: green}
+  diag/power:
+    undervoltage_events_24h: 5
+    recent_reboots: 4
+    max_temp_c: 60
+    uptime_s: 1200
+
+expected:
+  severity: red
+  root_cause_keywords: [power, undervoltage, supply, psu, cable, brownout]
+  recommended_actions: []  # User-physical-action; AI can't help
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true

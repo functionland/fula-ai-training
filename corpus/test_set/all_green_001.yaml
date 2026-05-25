@@ -1,0 +1,27 @@
+id: all_green_001
+description: Device is genuinely healthy. AI should say so + recommend nothing.
+
+user_prompt: |
+  Just checking — anything I should be worried about?
+
+canned_diag_responses:
+  diag/summary:
+    overall: green
+    subsystems:
+      internet:   {status: green, key_metrics: {discovery_https_ok: true, latency_ms_avg: 40}}
+      time:       {status: green}
+      containers: {status: green, key_metrics: {running_count: 6, oom_count: 0}}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: green, key_metrics: {active: true, last_handshake_age_sec: 25}}
+      heartbeat:  {status: green, key_metrics: {http_status: 200}}
+      relay:      {status: green, key_metrics: {reservation_count: 5}}
+
+expected:
+  severity: green
+  root_cause_keywords: [healthy, no, issue, fine, normal, ok, all good]
+  recommended_actions: []  # Nothing to do
+
+hard_rules:
+  max_tool_calls: 2
+  no_whitelist_violations: true

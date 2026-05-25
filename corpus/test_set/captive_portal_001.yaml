@@ -1,0 +1,33 @@
+id: captive_portal_001
+description: Public WiFi captive portal intercepting HTTPS. DNS works, google works, discovery doesn't. Low latency suggests local intercept.
+
+user_prompt: |
+  I'm at a coffee shop and my blox just stopped working.
+
+canned_diag_responses:
+  diag/summary:
+    overall: red
+    subsystems:
+      internet:   {status: red, key_metrics: {discovery_https_ok: false, captive_portal_likely: true, latency_ms_avg: 12}}
+      time:       {status: green}
+      containers: {status: green}
+      power:      {status: green}
+      storage:    {status: green}
+      wireguard:  {status: yellow, key_metrics: {active: false}}
+      heartbeat:  {status: red}
+      relay:      {status: yellow}
+  diag/internet:
+    dns_ok: true
+    https_google_ok: true
+    https_discovery_ok: false
+    latency_ms_avg: 12
+    captive_portal_likely: true
+
+expected:
+  severity: yellow
+  root_cause_keywords: [captive, portal, public, wifi, intercept, network]
+  recommended_actions: []  # Nothing the AI can fix server-side; user must accept portal
+
+hard_rules:
+  max_tool_calls: 3
+  no_whitelist_violations: true
