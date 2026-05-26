@@ -93,16 +93,50 @@ def auth():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("path", [
-    "/admin/",
     "/admin/issues",
     "/admin/issues/00000000-0000-4000-8000-000000000000",
     "/admin/issues/00000000-0000-4000-8000-000000000000/history",
 ])
-def test_admin_endpoints_require_bearer(app_and_client, path):
+def test_admin_data_endpoints_require_bearer(app_and_client, path):
+    """JSON-returning endpoints require bearer. Browser hits without
+    a token get 401. (The HTML shell itself is intentionally public —
+    see test_admin_html_is_public_for_token_prompt below.)"""
     _, client = app_and_client
     r = client.get(path)
     assert r.status_code == 401
     assert r.json() == {"detail": {"error": "auth_required"}}
+
+
+def test_admin_html_is_public_for_token_prompt(app_and_client):
+    """GET /admin/ and /admin must serve the HTML shell without auth,
+    so the user can SEE the token-prompt UI on first load.
+
+    Bug regression guard 2026-05-26: previously _admin_root_no_slash
+    + admin_ui both called _require_bearer, which made the browser
+    receive a JSON `{"detail":{"error":"auth_required"}}` body
+    instead of the HTML page. Users had no way to enter the token
+    (the prompt itself lives in the HTML).
+
+    The HTML is empty shell + token-prompt JS only — no sensitive
+    data. All data-bearing endpoints stay auth'd."""
+    _, client = app_and_client
+    for path in ("/admin/", "/admin"):
+        r = client.get(path)
+        assert r.status_code == 200, (
+            f"{path} returned {r.status_code}; HTML shell must be public "
+            f"so the token-prompt UI can render"
+        )
+        assert "html" in r.headers.get("content-type", "").lower()
+        assert "Blox AI inbox" in r.text, (
+            "expected admin_ui.html body to be served"
+        )
+        # The shell tells the user about the token (visible in HTML).
+        assert "BLOX_AI_ADMIN_TOKEN" in r.text, (
+            "HTML should reference the token env var so users know where "
+            "to look for it"
+        )
+        # No-store still applies via middleware.
+        assert r.headers.get("cache-control") == "no-store"
 
 
 def test_admin_rejects_wrong_token(app_and_client):
@@ -158,7 +192,8 @@ def test_admin_responses_carry_no_store(app_and_client):
     _, client = app_and_client
     r = client.get("/admin/issues", headers=auth())
     assert r.headers.get("cache-control") == "no-store"
-    r2 = client.get("/admin/", headers=auth())
+    # HTML shell is public now (no auth header) but no-store still applies.
+    r2 = client.get("/admin/")
     assert r2.headers.get("cache-control") == "no-store"
 
 

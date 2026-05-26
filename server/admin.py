@@ -153,15 +153,23 @@ def make_admin_router(get_db, get_storage, ui_html_path: Path) -> APIRouter:
 
     @router.get("", include_in_schema=False)
     def _admin_root_no_slash(request: Request) -> Response:
-        # FastAPI's APIRouter doesn't auto-redirect /admin -> /admin/ when
-        # we set prefix='/admin' + route='/'. Provide both explicitly so
-        # nginx + browsers see a stable URL.
-        _require_bearer(request)
+        # The HTML page itself is PUBLIC by design — it's an empty
+        # vanilla-JS shell that PROMPTS the user for the bearer token
+        # and stashes it in localStorage. If we gated this route too,
+        # the browser would get the raw 401 JSON body and the user
+        # would never see a token input field (chicken-and-egg bug
+        # observed 2026-05-26). All JSON endpoints below remain
+        # auth'd; only the shell HTML is public.
+        #
+        # FastAPI's APIRouter doesn't auto-redirect /admin -> /admin/
+        # when we set prefix='/admin' + route='/'. Provide both
+        # explicitly so nginx + browsers see a stable URL.
         return _serve_ui(ui_html_path)
 
     @router.get("/", include_in_schema=False)
-    def admin_ui(request: Request) -> Response:
-        _require_bearer(request)
+    def admin_ui(_request: Request) -> Response:
+        # See _admin_root_no_slash above — HTML shell is public; only
+        # the data-bearing endpoints require the bearer token.
         return _serve_ui(ui_html_path)
 
     @router.get("/issues")
