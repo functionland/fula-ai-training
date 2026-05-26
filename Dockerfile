@@ -41,6 +41,15 @@ ENV BLOX_AI_STORAGE_DIR=/var/lib/blox-ai-intake/transcripts \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
+# Switch CWD to where the modules live so bare imports resolve.
+# server/app.py uses flat imports (`import issue_db`, `from
+# anonymization_check import find_pii`, etc.) which expect the
+# server/ directory to be on sys.path. Python always adds CWD to
+# sys.path, so making /app/server the CWD is the simplest fix — no
+# PYTHONPATH gymnastics, no `server.` prefix rewrites, and the test
+# suite's conftest.py already uses the same layout.
+WORKDIR /app/server
+
 USER blox
 
 EXPOSE 8000
@@ -49,7 +58,9 @@ EXPOSE 8000
 # that to 127.0.0.1:8090 on the host (never publicly exposed; nginx
 # proxies it). 1 worker is plenty for this load profile; intake server
 # is I/O bound on file writes.
-CMD ["uvicorn", "server.app:app", \
+# CMD uses `app:app` (not `server.app:app`) because WORKDIR is now
+# /app/server, so `app` resolves to /app/server/app.py directly.
+CMD ["uvicorn", "app:app", \
      "--host", "0.0.0.0", \
      "--port", "8000", \
      "--workers", "1", \
