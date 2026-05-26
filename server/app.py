@@ -16,11 +16,13 @@ The server NEVER:
 """
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
 import time
 from collections import defaultdict, deque
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +30,8 @@ import jsonschema
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
+import issue_db
+from admin import make_admin_router
 from anonymization_check import find_pii
 from storage import LocalDirStorage, Storage, StorageError
 
@@ -71,11 +75,106 @@ def _make_storage() -> Storage:
 _storage: Storage = _make_storage()
 
 
+# ---------------------------------------------------------------------------
+# Issue DB (status-tracked inbox sidecar) — lifespan-managed
+# ---------------------------------------------------------------------------
+
+def _db_path() -> Path:
+    """Resolve the issue DB path. Defaults to a sibling of the storage dir
+    so backups + log rotation paths line up naturally."""
+    explicit = os.environ.get("BLOX_AI_DB_PATH")
+    if explicit:
+        return Path(explicit)
+    # Sibling: /var/lib/blox-ai-intake/transcripts/ -> /var/lib/blox-ai-intake/db/issues.sqlite
+    storage_root = Path(getattr(_storage, "root", "/tmp/blox-ai-intake"))
+    return storage_root.parent / "db" / "issues.sqlite"
+
+
+_db_conn = None  # opened in lifespan startup
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Open SQLite WAL connection + spawn background migration that walks
+    pre-existing transcripts and inserts status='new' rows. The migration
+    yields to the event loop so request handling is responsive even on
+    large existing trees."""
+    global _db_conn
+    path = _db_path()
+    logger.info("opening issue DB at %s", path)
+    _db_conn = issue_db.open_db(path)
+    issue_db.init_schema(_db_conn)
+    # Spawn migration as a background task so startup doesn't block.
+    storage_root = Path(getattr(_storage, "root", ""))
+    if storage_root.exists():
+        asyncio.create_task(_run_migration(storage_root))
+    yield
+    logger.info("closing issue DB")
+    if _db_conn is not None:
+        _db_conn.close()
+        _db_conn = None
+
+
+async def _run_migration(storage_root: Path) -> None:
+    try:
+        n = await issue_db.background_migration(_db_conn, storage_root)
+        logger.info("migration: scanned %d existing transcripts", n)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("migration failed: %s", e)
+
+
+def _get_db():
+    """Accessor passed to the admin router; raises if startup hasn't run
+    (e.g., tests that bypass lifespan)."""
+    if _db_conn is None:
+        raise RuntimeError("issue DB not initialized; ensure lifespan ran")
+    return _db_conn
+
+
+def _get_storage():
+    return _storage
+
+
 app = FastAPI(
     title="Blox AI intake server",
     description="Receives opt-in anonymized troubleshooting transcripts.",
     version="0.1.0",
+    lifespan=_lifespan,
 )
+
+# Mount the admin router (status-tracked inbox + web UI).
+_UI_HTML = Path(__file__).parent / "admin_ui.html"
+app.include_router(make_admin_router(_get_db, _get_storage, _UI_HTML))
+
+
+# Codex review fix: HTTPException responses (401/422/413/etc) don't pass
+# through our per-endpoint NO_STORE header dict, so error bodies could end
+# up in browser/proxy caches. Middleware enforces no-store on EVERY
+# response under /admin/*, regardless of status code or source.
+#
+# Copilot review fix: middleware must also cover the unhandled-exception
+# path. If a handler raises before producing a response, the default 500
+# response would leak without no-store. We catch the exception, log it,
+# and return a manual 500 with the header attached. Non-admin paths
+# re-raise so default error handling applies as usual.
+@app.middleware("http")
+async def _admin_no_store(request: Request, call_next):
+    path = request.url.path or ""
+    is_admin = path == "/admin" or path.startswith("/admin/")
+    try:
+        response = await call_next(request)
+    except Exception:
+        if is_admin:
+            logger.exception("admin endpoint raised; returning 500 with no-store")
+            return JSONResponse(
+                {"detail": "internal_error"},
+                status_code=500,
+                headers={"Cache-Control": "no-store"},
+            )
+        raise
+    if is_admin:
+        response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/health")
@@ -142,6 +241,18 @@ async def post_transcript(request: Request) -> Response:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"error": "storage_unavailable"},
         )
+
+    # 6. Track in the issue DB so it shows up in the admin inbox.
+    # Failure here MUST NOT 5xx the upload — the transcript is already on
+    # disk and the background migration will pick it up next restart.
+    if _db_conn is not None:
+        try:
+            issue_db.upsert_transcript_issue(
+                _db_conn, upload_id, storage_key=result.storage_key,
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("issue_db upsert failed (non-fatal) upload_id=%s: %s",
+                            upload_id, e)
 
     logger.info("persisted upload_id=%s written=%s key=%s",
                 upload_id, result.written, result.storage_key)

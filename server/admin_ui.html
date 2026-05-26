@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Blox AI inbox</title>
+  <style>
+    :root {
+      --bg: #0e1117; --fg: #d0d7de; --muted: #8b949e;
+      --accent: #58a6ff; --new: #2da44e; --reviewed: #bf8700;
+      --fixed: #8250df; --dismissed: #6e7681;
+      --border: #30363d; --card: #161b22; --hover: #1f2630;
+      --danger: #f85149;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #ffffff; --fg: #1f2328; --muted: #57606a;
+        --accent: #0969da; --new: #1a7f37; --reviewed: #9a6700;
+        --fixed: #8250df; --dismissed: #6e7781;
+        --border: #d0d7de; --card: #f6f8fa; --hover: #eaeef2;
+        --danger: #d1242f;
+      }
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+                 font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                       Helvetica, Arial, sans-serif; }
+    header { padding: 12px 20px; border-bottom: 1px solid var(--border);
+             display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+    header .actions button { margin-left: 8px; }
+    main { padding: 16px 20px; max-width: 1200px; margin: 0 auto; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 16px; flex-wrap: wrap; }
+    .tab { padding: 8px 16px; border: 1px solid var(--border);
+           background: var(--card); cursor: pointer; border-radius: 6px;
+           font-weight: 500; }
+    .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+    .tab .count { opacity: 0.7; font-weight: 400; margin-left: 4px; }
+    .controls { display: flex; gap: 12px; align-items: center; margin-bottom: 16px;
+                flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+    .controls input, .controls select { background: var(--card); color: var(--fg);
+           border: 1px solid var(--border); padding: 6px 8px; border-radius: 4px; }
+    button { background: var(--card); color: var(--fg); border: 1px solid var(--border);
+             padding: 6px 12px; border-radius: 4px; cursor: pointer; font: inherit; }
+    button:hover { background: var(--hover); }
+    button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+    button.danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+    .banner { padding: 8px 12px; border-radius: 4px; margin-bottom: 12px;
+              background: var(--card); border: 1px solid var(--border); font-size: 13px; }
+    .banner.error { border-color: var(--danger); color: var(--danger); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    th { font-weight: 600; color: var(--muted); font-size: 12px; text-transform: uppercase;
+         letter-spacing: 0.05em; }
+    tr.row { cursor: pointer; }
+    tr.row:hover { background: var(--hover); }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 10px;
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; }
+    .pill.new { background: var(--new); color: white; }
+    .pill.reviewed { background: var(--reviewed); color: white; }
+    .pill.fixed { background: var(--fixed); color: white; }
+    .pill.dismissed { background: var(--dismissed); color: white; }
+    .empty { text-align: center; padding: 32px; color: var(--muted); }
+    .pagination { display: flex; gap: 8px; justify-content: center; margin-top: 16px;
+                  color: var(--muted); font-size: 13px; align-items: center; }
+    .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+                display: none; align-items: flex-start; justify-content: center;
+                padding: 32px; overflow-y: auto; z-index: 100; }
+    .modal-bg.open { display: flex; }
+    .modal { background: var(--bg); border: 1px solid var(--border);
+             border-radius: 8px; padding: 20px; max-width: 900px; width: 100%;
+             max-height: calc(100vh - 64px); display: flex; flex-direction: column; }
+    .modal h2 { margin-top: 0; font-size: 16px; }
+    .modal .meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+    .modal pre {
+      background: var(--card); border: 1px solid var(--border);
+      padding: 12px; border-radius: 4px; flex: 1; overflow: auto;
+      font-family: 'SFMono-Regular', Consolas, monospace; font-size: 12px;
+      /* Gemini's specific recommendation: avoid horizontal layout blowouts */
+      white-space: pre-wrap; word-break: break-all;
+      max-height: 50vh;
+    }
+    .modal .modal-actions { margin-top: 16px; display: flex; gap: 8px;
+                            flex-wrap: wrap; justify-content: space-between; }
+    .modal .modal-actions .left, .modal .modal-actions .right { display: flex; gap: 8px; }
+    .history { max-height: 200px; overflow: auto; font-size: 12px;
+               color: var(--muted); border-top: 1px solid var(--border);
+               margin-top: 12px; padding-top: 12px; }
+    .history .h-row { padding: 4px 0; }
+    .token-prompt { display: flex; flex-direction: column; gap: 12px;
+                    max-width: 400px; margin: 64px auto; padding: 24px;
+                    border: 1px solid var(--border); border-radius: 8px; background: var(--card); }
+  </style>
+</head>
+<body>
+
+<div id="token-screen" class="token-prompt" style="display: none;">
+  <h2>Admin token required</h2>
+  <p style="color: var(--muted); font-size: 13px;">
+    Paste the <code>BLOX_AI_ADMIN_TOKEN</code> from your VPS <code>.env</code>.
+    Stored in this browser's <code>localStorage</code> only.
+  </p>
+  <input type="password" id="token-input" placeholder="Paste token here" autofocus>
+  <button class="primary" onclick="saveToken()">Save and load</button>
+</div>
+
+<div id="app-screen" style="display: none;">
+  <header>
+    <h1>Blox AI inbox</h1>
+    <div class="actions">
+      <button onclick="refresh()">Refresh</button>
+      <button onclick="logout()">Logout</button>
+    </div>
+  </header>
+  <main>
+    <div id="banner" class="banner" style="display: none;"></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="controls">
+      <label>Since: <input type="date" id="since-input" onchange="refresh()"></label>
+      <label>Limit: <input type="number" id="limit-input" value="50" min="1" max="200" style="width: 70px;" onchange="refresh()"></label>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>Source</th><th>Status</th><th>Created</th><th>Summary</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <div id="empty" class="empty" style="display: none;">No issues to show.</div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+</div>
+
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal">
+    <h2 id="modal-title"></h2>
+    <div class="meta" id="modal-meta"></div>
+    <pre id="modal-json"></pre>
+    <div class="modal-actions">
+      <div class="left">
+        <button onclick="copyJson()">Copy JSON</button>
+        <button onclick="toggleHistory()">View history</button>
+      </div>
+      <div class="right">
+        <button onclick="markStatus('reviewed')">Mark reviewed</button>
+        <button onclick="markStatus('fixed')">Mark fixed</button>
+        <button onclick="markStatus('dismissed')">Mark dismissed</button>
+        <button class="danger" onclick="deleteIssue()">Delete</button>
+        <button onclick="closeModal()">Close</button>
+      </div>
+    </div>
+    <div class="history" id="history" style="display: none;"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+const STATUS_ORDER = ['new', 'reviewed', 'fixed', 'dismissed'];
+let state = {
+  token: null,
+  activeStatus: 'new',
+  counts: { new: 0, reviewed: 0, fixed: 0, dismissed: 0 },
+  page: { items: [], total: 0, limit: 50, offset: 0 },
+  openIssue: null,
+};
+
+function init() {
+  state.token = localStorage.getItem('blox_ai_admin_token') || null;
+  if (!state.token) { showTokenPrompt(); return; }
+  showApp();
+  renderTabs();
+  refresh();
+}
+function showTokenPrompt() {
+  document.getElementById('token-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+}
+function showApp() {
+  document.getElementById('token-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+}
+function saveToken() {
+  const v = document.getElementById('token-input').value.trim();
+  if (!v) return;
+  state.token = v;
+  localStorage.setItem('blox_ai_admin_token', v);
+  init();
+}
+function logout() {
+  localStorage.removeItem('blox_ai_admin_token');
+  state.token = null;
+  showTokenPrompt();
+}
+
+function authHeaders() {
+  return { 'Authorization': 'Bearer ' + state.token };
+}
+
+async function fetchJson(url, opts = {}) {
+  const headers = { ...authHeaders(), ...(opts.headers || {}) };
+  const res = await fetch(url, { ...opts, headers });
+  if (res.status === 401) {
+    showBanner('Authentication failed. Re-enter your token.', 'error');
+    logout();
+    throw new Error('auth_required');
+  }
+  if (res.status === 429) {
+    showBanner('Rate-limited on auth attempts. Wait a minute and try again.', 'error');
+    throw new Error('auth_rate_limit');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    showBanner('HTTP ' + res.status + ': ' + body, 'error');
+    throw new Error('http_' + res.status);
+  }
+  // 204 = no body
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+function showBanner(msg, kind) {
+  const el = document.getElementById('banner');
+  el.textContent = msg;
+  el.className = 'banner' + (kind ? ' ' + kind : '');
+  el.style.display = 'block';
+}
+function clearBanner() {
+  const el = document.getElementById('banner');
+  el.style.display = 'none';
+  el.textContent = '';
+}
+
+async function refresh() {
+  clearBanner();
+  // Fetch counts for all four tabs in parallel
+  const sinceVal = document.getElementById('since-input').value;
+  const limitVal = parseInt(document.getElementById('limit-input').value, 10) || 50;
+  const sinceParam = sinceVal ? '&since=' + encodeURIComponent(sinceVal) : '';
+  try {
+    const promises = STATUS_ORDER.map(s =>
+      fetchJson('/admin/issues?status=' + s + '&limit=1' + sinceParam)
+        .then(j => [s, j.total])
+        .catch(() => [s, 0])
+    );
+    const results = await Promise.all(promises);
+    results.forEach(([s, n]) => { state.counts[s] = n; });
+    renderTabs();
+    // Then fetch the active tab's page
+    state.page.limit = limitVal;
+    state.page.offset = 0;
+    await loadPage();
+  } catch (e) {
+    // banner already shown
+  }
+}
+
+async function loadPage() {
+  const sinceVal = document.getElementById('since-input').value;
+  const sinceParam = sinceVal ? '&since=' + encodeURIComponent(sinceVal) : '';
+  const url = '/admin/issues?status=' + state.activeStatus
+            + '&limit=' + state.page.limit
+            + '&offset=' + state.page.offset
+            + sinceParam;
+  const j = await fetchJson(url);
+  state.page.items = j.items;
+  state.page.total = j.total;
+  renderRows();
+  renderPagination();
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('tabs');
+  tabs.innerHTML = '';
+  STATUS_ORDER.forEach(s => {
+    const div = document.createElement('div');
+    div.className = 'tab' + (s === state.activeStatus ? ' active' : '');
+    div.textContent = s;
+    const c = document.createElement('span');
+    c.className = 'count';
+    c.textContent = '(' + state.counts[s] + ')';
+    div.appendChild(c);
+    div.onclick = () => { state.activeStatus = s; state.page.offset = 0; renderTabs(); loadPage(); };
+    tabs.appendChild(div);
+  });
+}
+
+function renderRows() {
+  const tbody = document.getElementById('rows');
+  tbody.innerHTML = '';
+  if (state.page.items.length === 0) {
+    document.getElementById('empty').style.display = 'block';
+    return;
+  }
+  document.getElementById('empty').style.display = 'none';
+  state.page.items.forEach(it => {
+    const tr = document.createElement('tr');
+    tr.className = 'row';
+    tr.onclick = () => openIssue(it.id);
+    tr.appendChild(td(it.id.slice(0, 8) + '…'));
+    tr.appendChild(td(it.source));
+    const statusTd = document.createElement('td');
+    const pill = document.createElement('span');
+    pill.className = 'pill ' + it.status;
+    pill.textContent = it.status;
+    statusTd.appendChild(pill);
+    tr.appendChild(statusTd);
+    tr.appendChild(td(it.created_at));
+    tr.appendChild(td((it.summary || '').slice(0, 80)));
+    tbody.appendChild(tr);
+  });
+}
+
+function td(text) {
+  const el = document.createElement('td');
+  el.textContent = text;
+  return el;
+}
+
+function renderPagination() {
+  const p = document.getElementById('pagination');
+  p.innerHTML = '';
+  const start = state.page.offset + 1;
+  const end = Math.min(state.page.offset + state.page.limit, state.page.total);
+  if (state.page.total === 0) { p.textContent = ''; return; }
+  const label = document.createElement('span');
+  label.textContent = start + '–' + end + ' of ' + state.page.total;
+  const prev = document.createElement('button');
+  prev.textContent = '← Prev';
+  prev.disabled = state.page.offset === 0;
+  prev.onclick = () => { state.page.offset = Math.max(0, state.page.offset - state.page.limit); loadPage(); };
+  const next = document.createElement('button');
+  next.textContent = 'Next →';
+  next.disabled = state.page.offset + state.page.limit >= state.page.total;
+  next.onclick = () => { state.page.offset += state.page.limit; loadPage(); };
+  p.appendChild(prev);
+  p.appendChild(label);
+  p.appendChild(next);
+}
+
+async function openIssue(id) {
+  try {
+    const j = await fetchJson('/admin/issues/' + encodeURIComponent(id));
+    state.openIssue = j;
+    document.getElementById('modal-title').textContent = id;
+    document.getElementById('modal-meta').textContent =
+      'source: ' + j.source + ' · status: ' + j.status
+      + ' · created: ' + j.created_at
+      + ' · updated: ' + j.updated_at;
+    // textContent (not innerHTML) — XSS-safe
+    document.getElementById('modal-json').textContent =
+      JSON.stringify(j.payload, null, 2);
+    document.getElementById('history').style.display = 'none';
+    document.getElementById('history').innerHTML = '';
+    document.getElementById('modal-bg').classList.add('open');
+  } catch (e) { /* banner shown */ }
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+  state.openIssue = null;
+}
+
+function copyJson() {
+  if (!state.openIssue) return;
+  const text = JSON.stringify(state.openIssue.payload, null, 2);
+  navigator.clipboard.writeText(text).then(
+    () => showBanner('Copied to clipboard.', ''),
+    () => showBanner('Copy failed; select the JSON manually.', 'error'),
+  );
+  setTimeout(clearBanner, 2500);
+}
+
+async function markStatus(newStatus) {
+  if (!state.openIssue) return;
+  try {
+    await fetchJson('/admin/issues/' + encodeURIComponent(state.openIssue.id), {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    closeModal();
+    await refresh();
+  } catch (e) { /* banner shown */ }
+}
+
+async function deleteIssue() {
+  if (!state.openIssue) return;
+  if (!confirm('Hard-delete this issue and its transcript file? Cannot be undone.')) return;
+  try {
+    await fetchJson('/admin/issues/' + encodeURIComponent(state.openIssue.id), {
+      method: 'DELETE',
+    });
+    closeModal();
+    await refresh();
+  } catch (e) { /* banner shown */ }
+}
+
+async function toggleHistory() {
+  const hist = document.getElementById('history');
+  if (hist.style.display !== 'none') { hist.style.display = 'none'; return; }
+  if (!state.openIssue) return;
+  try {
+    const j = await fetchJson('/admin/issues/' + encodeURIComponent(state.openIssue.id) + '/history');
+    hist.innerHTML = '';
+    if (!j.history || j.history.length === 0) {
+      hist.textContent = 'No history.';
+    } else {
+      j.history.forEach(h => {
+        const row = document.createElement('div');
+        row.className = 'h-row';
+        row.textContent = h.changed_at + ' · ' + (h.from_status || '(initial)') + ' → ' + h.to_status;
+        hist.appendChild(row);
+      });
+    }
+    hist.style.display = 'block';
+  } catch (e) { /* banner shown */ }
+}
+
+// Submit token form on Enter
+document.getElementById('token-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveToken();
+});
+
+init();
+</script>
+
+</body>
+</html>
