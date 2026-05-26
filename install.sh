@@ -114,22 +114,124 @@ require_distro() {
   fi
 }
 
-prompt_domain_email() {
-  if [ -z "$DOMAIN" ]; then
-    read -rp "Domain (e.g. ai-training.fx.land): " DOMAIN
+# ────────────────────────────────────────────────────────────────────
+# .env-backed persistence for DOMAIN + SSL_EMAIL
+#
+# Priority order resolved by prompt_domain_email():
+#   1. Env var set in the calling shell  (highest — explicit override)
+#   2. Value saved in .env from a prior run (interactive: confirm or
+#      override; non-interactive: use as-is)
+#   3. Fresh interactive prompt (no saved value, no env var)
+#
+# Persisted to ${ENV_FILE} after resolution so subsequent re-runs can
+# recall without re-prompting. To clear a saved value, edit .env.
+# ────────────────────────────────────────────────────────────────────
+
+SAVED_DOMAIN=""
+SAVED_SSL_EMAIL=""
+
+load_env_file() {
+  # Read DOMAIN / SSL_EMAIL out of .env (last occurrence wins, matching
+  # docker-compose behaviour). We don't `source` .env to avoid running
+  # arbitrary code or polluting our shell with unrelated keys (like the
+  # admin token).
+  if [ ! -f "$ENV_FILE" ]; then
+    return 0
   fi
-  if [ -z "$DOMAIN" ]; then
-    err "Domain is required (or set DOMAIN env var)"
-    exit 1
+  local val
+  val=$(grep -E '^DOMAIN=' "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2-)
+  if [ -n "$val" ]; then SAVED_DOMAIN="$val"; fi
+  val=$(grep -E '^SSL_EMAIL=' "$ENV_FILE" 2>/dev/null | tail -1 | cut -d= -f2-)
+  if [ -n "$val" ]; then SAVED_SSL_EMAIL="$val"; fi
+}
+
+save_to_env_file() {
+  # Idempotent: replaces an existing KEY= line, or appends if not present.
+  # Preserves all other lines (admin token, future keys).
+  local key="$1"
+  local value="$2"
+  if [ "$DRY_RUN" = 1 ]; then
+    info "[dry-run] would persist ${key}=... to ${ENV_FILE}"
+    return 0
+  fi
+  if [ ! -f "$ENV_FILE" ]; then
+    touch "$ENV_FILE"
+    chmod 0640 "$ENV_FILE"
+  fi
+  local tmp="${ENV_FILE}.tmp.$$"
+  # Strip any existing line for this key
+  grep -v "^${key}=" "$ENV_FILE" > "$tmp" 2>/dev/null || true
+  printf '%s=%s\n' "$key" "$value" >> "$tmp"
+  mv "$tmp" "$ENV_FILE"
+  chmod 0640 "$ENV_FILE"
+}
+
+# Helper used by prompt_domain_email — resolves one value with the
+# env-var > saved > prompt precedence + persists the result.
+_resolve_value() {
+  local label="$1"        # e.g. "Domain"
+  local var_name="$2"     # e.g. "DOMAIN"
+  local saved_value="$3"  # value loaded from .env (may be empty)
+  local prompt_text="$4"  # "Domain (e.g. ai-training.fx.land): "
+  local current_value
+  eval "current_value=\${$var_name:-}"
+
+  # 1. Env var wins (operator's explicit override).
+  if [ -n "$current_value" ]; then
+    if [ -n "$saved_value" ] && [ "$current_value" != "$saved_value" ]; then
+      info "${label}: '${current_value}' (env var; overrides saved '${saved_value}')"
+    else
+      info "${label}: '${current_value}' (from env var)"
+    fi
+    return 0
   fi
 
-  if [ -z "$SSL_EMAIL" ]; then
-    read -rp "Email for Let's Encrypt notifications: " SSL_EMAIL
+  # 2. Saved value from prior run.
+  if [ -n "$saved_value" ]; then
+    if [ "$ASSUME_YES" = 1 ] || [ "$DRY_RUN" = 1 ] || [ ! -t 0 ]; then
+      eval "$var_name=\"\$saved_value\""
+      info "${label}: '${saved_value}' (from ${ENV_FILE}; non-interactive)"
+      return 0
+    fi
+    # Interactive: show saved value, accept Enter to keep, or new value to override.
+    local reply=""
+    read -rp "${label} [saved: ${saved_value}] (press Enter to keep, or type new): " reply
+    if [ -z "$reply" ]; then
+      eval "$var_name=\"\$saved_value\""
+      info "${label}: '${saved_value}' (kept)"
+    else
+      eval "$var_name=\"\$reply\""
+      info "${label}: '${reply}' (new value; will overwrite saved)"
+    fi
+    return 0
   fi
-  if [ -z "$SSL_EMAIL" ]; then
-    err "SSL email is required (or set SSL_EMAIL env var). Let's Encrypt sends expiry warnings here."
+
+  # 3. Fresh interactive prompt — no saved value, no env var.
+  if [ ! -t 0 ]; then
+    err "${label} is required, but no env var is set and the shell isn't"
+    err "interactive (so we can't prompt). Set ${var_name}=... in the env"
+    err "or run the script interactively."
     exit 1
   fi
+  local reply=""
+  read -rp "${prompt_text}" reply
+  if [ -z "$reply" ]; then
+    err "${label} is required."
+    exit 1
+  fi
+  eval "$var_name=\"\$reply\""
+}
+
+prompt_domain_email() {
+  _resolve_value "Domain"    "DOMAIN"    "$SAVED_DOMAIN" \
+                 "Domain (e.g. ai-training.fx.land): "
+  _resolve_value "SSL email" "SSL_EMAIL" "$SAVED_SSL_EMAIL" \
+                 "Email for Let's Encrypt notifications: "
+
+  # Persist resolved values so subsequent re-runs remember them.
+  # Skipped under --check via save_to_env_file's own DRY_RUN guard.
+  save_to_env_file DOMAIN    "$DOMAIN"
+  save_to_env_file SSL_EMAIL "$SSL_EMAIL"
 }
 
 check_dns_or_warn() {
@@ -826,9 +928,14 @@ print_summary() {
 
 main() {
   # ── Read-only phase (no host mutation) ──────────────────────────────
+  # The only thing that may touch disk before confirmation is the
+  # save_to_env_file call at the end of prompt_domain_email, which
+  # writes resolved DOMAIN+SSL_EMAIL to .env so future re-runs remember
+  # them. Skipped under --check.
   require_root
   require_distro
-  prompt_domain_email
+  load_env_file               # recall saved DOMAIN / SSL_EMAIL from .env
+  prompt_domain_email         # env > saved > prompt, then persist
   check_dns_or_warn
   show_host_state             # prints current ufw / ports / containers / nginx
   coexistence_preflight       # detects conflicts; sets CONFLICTS_FOUND
