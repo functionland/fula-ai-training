@@ -346,23 +346,38 @@ show_host_state() {
 coexistence_preflight() {
   section "0b. coexistence checks (detect interference)"
 
+  # ── Is the port held by OUR own container? (re-run case) ──
+  # If so, `docker compose up --force-recreate` will stop + replace
+  # the old container cleanly; the port handoff is seamless. This is
+  # NOT a conflict — silence the false-positive warning that would
+  # otherwise fire on every successful re-install.
+  local port_held_by_us=0
+  if command -v docker >/dev/null 2>&1 \
+     && docker ps --filter "name=^${SERVICE_NAME}\$" --format '{{.Ports}}' 2>/dev/null \
+        | grep -q "127.0.0.1:${HOST_BIND_PORT}->"; then
+    port_held_by_us=1
+  fi
+
   # ── Port 8090 in use? ──
   # `ss -lnt` reads /proc/net/tcp; works without root for listening sockets.
   # We accept binds on 0.0.0.0:8090, [::]:8090, 127.0.0.1:8090, or any
-  # specific interface — any of those would collide with our compose bind.
+  # specific interface — any of those would collide with our compose bind
+  # UNLESS the binding is from our own container (handled above).
   if command -v ss >/dev/null 2>&1; then
-    if ss -lnt 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)${HOST_BIND_PORT}\$"; then
+    if [ "$port_held_by_us" = 1 ]; then
+      ok "Port ${HOST_BIND_PORT}/tcp held by our running ${SERVICE_NAME} container — will recreate cleanly"
+    elif ss -lnt 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)${HOST_BIND_PORT}\$"; then
       PORT_8090_PRE_USE=1
       CONFLICTS_FOUND=$((CONFLICTS_FOUND + 1))
-      warn "CONFLICT: port ${HOST_BIND_PORT}/tcp is already listening on this host"
+      warn "CONFLICT: port ${HOST_BIND_PORT}/tcp is held by a DIFFERENT service"
       warn "  Identified above in the 'Listening TCP ports' diagnostic."
+      warn "  (Not held by our '${SERVICE_NAME}' container — verified via docker ps.)"
       warn "  Will SKIP our ufw deny rule on ${HOST_BIND_PORT}/tcp (could disrupt them)."
       warn "  \`docker compose up\` will likely fail with 'address already in use'."
       warn "  Fix options:"
-      warn "    a) If this is an OLD blox-ai-intake instance:"
-      warn "         sudo docker rm -f ${SERVICE_NAME}"
-      warn "    b) If it's a different service, edit docker-compose.yml +"
-      warn "       this script to use a different HOST_BIND_PORT (e.g. 8091)."
+      warn "    a) Stop the other service using ${HOST_BIND_PORT}/tcp, then re-run."
+      warn "    b) Edit docker-compose.yml + this script to use a different"
+      warn "       HOST_BIND_PORT (e.g. 8091)."
     else
       ok "Port ${HOST_BIND_PORT}/tcp is free"
     fi
