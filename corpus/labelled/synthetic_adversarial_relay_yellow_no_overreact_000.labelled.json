@@ -1,0 +1,118 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=adversarial_relay_yellow_no_overreact; category=adversarial-rule-10; variation=0; tags=adversarial,rule-10,yellow-is-informational",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "bf980670-556c-4f0a-9d51-9dd0755dff48",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>Health check. diag/summary shows yellow overall but only relay is yellow. Per rule 10, relay.reservation_count=0 is informational unless user reports unreachability. Heartbeat green = cloud sees the blox. Verdict green, no action.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T12:00:00Z",
+          "overall": "yellow",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 200000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 0
+              },
+              "status": "yellow"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Health check. diag/summary shows yellow overall but only relay is yellow. Per rule 10, relay.reservation_count=0 is informational unless user reports unreachability. Heartbeat green = cloud sees the blox. Verdict green, no action.</think>\nDevice is fundamentally healthy: heartbeat green (cloud sees the blox), internet green, all containers up. relay.reservation_count=0 is yellow but informational \u2014 only matters if the user is being reached from outside the LAN. No action needed.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "no_issue_relay_yellow_is_informational",
+          "severity": "green",
+          "summary": "Device is fundamentally healthy: heartbeat green (cloud sees the blox), internet green, all containers up. relay.reservation_count=0 is yellow but informational \u2014 only matters if the user is being reached from outside the LAN. No action needed."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "c52c879d-8b4d-403f-aa25-c4d7e9bd014b",
+    "user_prompt": "Hey, Health check on Blox please. Thanks!",
+    "user_rating": 1
+  },
+  "upload_id": "c52c879d-8b4d-403f-aa25-c4d7e9bd014b",
+  "verdict_correct": true
+}

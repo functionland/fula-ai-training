@@ -9,7 +9,8 @@ A complete fine-tune cycle takes 4-8 hours of operator time + several hours of G
 ```
 1. sync transcripts            (5 min)
 2. label ≥100 new transcripts (60-120 min, depends on operator)
-3. lora_train.py             (2-4 hours on a 24GB A10G)
+3. train_qwen3_messages.py   (2-4 hours on a 24GB A10G; Qwen 3 1.7B path)
+   OR lora_train.py          (legacy Qwen 2.5 3B path; do NOT use for Qwen 3)
 4. merge_lora.py             (5 min)
 5. rkllm_convert.sh         (30-90 min on the same GPU box)
 6. lab_canary.sh            (15 min including model load + eval)
@@ -18,6 +19,47 @@ A complete fine-tune cycle takes 4-8 hours of operator time + several hours of G
 9. observe for 2 weeks      (canary roll-out per parent plan Phase 22)
 10. promote to :release if clean
 ```
+
+## Iteration loop — turning new logs into a better model
+
+The corpus grows in two ways: synthetic templates (`corpus/synthetic/`) AND real anonymized uploads (`corpus/raw/` → `corpus/labelled/` via labeller). Both end up as `*.labelled.json` files in `corpus/labelled/`; the trainer doesn't care which is which.
+
+### Step-by-step (operator side)
+
+1. **Real transcripts arrive** via the Phase 21 opt-in flow → intake server → `corpus/raw/<upload_id>.json`. Run `python -m corpus.sync_corpus` (sub-phase 19.1) if the corpus dir isn't on your laptop yet.
+2. **Label them** with `BLOX_AI_RAW_DIR=corpus/raw BLOX_AI_LABELLED_DIR=corpus/labelled uvicorn labeller.app:app --port 8765`. Open `http://127.0.0.1:8765`, click through each transcript, set `accept`/`partial`/`reject` + the verdict/actions/root-cause checkboxes. Output lands as `corpus/labelled/<upload_id>.labelled.json`.
+3. **Re-train**: `python -m training.train_qwen3_messages --config training/configs/qwen3_1_7b_lora.yaml`. The trainer reads ALL `*.labelled.json` (synthetic + real). New synthetic + N real labelled = combined corpus.
+4. **Eval against the held-out set**: `python -m training.eval_held_out --adapter training/output/<latest>/adapter`. Read `eval_report.json` (see "Reading an eval report" below).
+5. **Merge LoRA + RKLLM-quantize + canary** per the full cycle walkthrough above.
+6. **Watch `ai-feedback.jsonl` thumbs-down rate** for 2 weeks. If it's worse than the prior model: rollback via `publish/update_manifest.py --rollback-required`.
+
+### Where Claude can help in the loop
+
+Operator-driven workflow always works (the infrastructure handles it). For substantive gains, share specific signals with the AI assistant:
+
+| You share | I help with |
+|---|---|
+| **A bad transcript** (already anonymized — peerIds, IPs, SSIDs, paths stripped per Phase 21 anonymizer) | Identify the failure pattern, add a new scenario template to `corpus/synthetic/scenarios_extended.py` targeting it, regenerate. The next training cycle picks it up automatically. |
+| **`eval_report.json` showing failed scenarios** | Diagnose WHY the model failed (missing training pattern? confused reasoning? whitelist drift?), propose targeted training examples + runbook updates. |
+| **`ai-feedback.jsonl` thumbs-down clustering** (the canary observation in step 6 above) | Trend analysis: are users complaining about the same kind of mis-diagnosis? Suggest runbook section additions + matching corpus examples. |
+| **New symptom class** (e.g., "users on a new network setup keep getting wrong verdict") | Co-design a new scenario template, capture lab snapshots for the relevant diag/* responses, add 10-15 training examples in one PR. |
+
+### Privacy posture for sharing with Claude
+
+- **Always anonymized first.** The intake-server transcripts are already anonymized; raw user data NEVER leaves the device.
+- **No raw peerIds, IPs, SSIDs, paths, or timestamps.** If you find PII in a transcript you're about to share, fix the anonymizer in `fx-components` first (or strip manually if it's a one-off).
+- **Aggregate stats are fine.** "12 out of 100 thumbs-down sessions matched this pattern" is shareable; the underlying 12 transcripts are if anonymized.
+
+### Why the loop is the actual learning mechanism
+
+The bootstrap synthetic dataset (174 examples shipped 2026-05-27) teaches the model the structural grammar + the 11 hard rules + the runbook patterns. It can't capture:
+- New failure modes users encounter in the wild
+- Phrasings of complaints we didn't anticipate
+- Subtle context dependencies (e.g., "users on Network X always have problem Y")
+
+Those only show up in real transcripts. Each labelled real transcript is worth MORE than a synthetic one because it's evidence of an actual production gap. The synthetic corpus is the floor; real labelled transcripts are the ceiling.
+
+**Cadence target**: 1 fine-tune cycle every 2-4 weeks once ≥100 real transcripts have accumulated. Until then, the synthetic-only corpus is sufficient for the first deploy + lab canary.
 
 ## Reading an eval report
 

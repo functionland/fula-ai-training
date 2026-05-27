@@ -1,0 +1,168 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=kubo_oom_legitimate_restart; category=runbook-section-containers; variation=2; tags=runbook-container,rule-9,legitimate-restart,high-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "89de452f-28c3-453d-8312-3a46c1c64ee9",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User says files aren't syncing / IPFS is broken. The most likely root cause per the runbook 'Container OOM' and 'Kubo / IPFS-cluster API hang' sections is that ipfs_host (which IS kubo, the IPFS daemon \u2014 'kubo' is the rename of go-ipfs, not kubernetes) is either OOM-killed, wedged, or hit a deadlock. Start with diag/summary to see overall state, then drill into diag/containers if containers subsystem is red.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T03:30:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "ipfs_host_oom": true,
+                "oom_count": 1,
+                "running_count": 6
+              },
+              "status": "red"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 86400
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 0
+              },
+              "status": "yellow"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Summary red, containers red, oom_count=1, ipfs_host_oom=true. Confirmed. Drill into containers.</think>\nCalling diag/containers to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/containers"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "containers": [
+            {
+              "image": "ipfs/kubo:release",
+              "name": "ipfs_host",
+              "oom_killed": true,
+              "restart_count": 4,
+              "started_at": "2026-05-27T03:25:00Z",
+              "state": "restarting"
+            },
+            {
+              "image": "functionland/ipfs-cluster:test153",
+              "name": "ipfs_cluster",
+              "oom_killed": false,
+              "restart_count": 0,
+              "started_at": "2026-05-26T03:30:00Z",
+              "state": "running"
+            }
+          ]
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/containers confirms: ipfs_host is in state=restarting with oom_killed=true and restart_count=4. Docker's auto-restart is firing but not stabilizing the container \u2014 usually means there's runaway allocation early in startup or stale state on disk. A forced clean restart via docker.restart often clears this. If it recurs after this restart, the device is likely RAM-constrained (the 1.7B model + RKLLM toolkit + 7 fula containers + kubo at moderate pin count is close to the limit on 7.7 GB devices). I'll recommend docker.restart container=ipfs_host at high confidence (~0.85).</think>\nipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "ipfs_host_oom_killed",
+          "severity": "red",
+          "summary": "ipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "docker.restart",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {
+          "container": "ipfs_host"
+        },
+        "confidence": 0.85,
+        "reasoning": "ipfs_host shows oom_killed=true with restart_count=4 \u2014 docker is auto-restarting but not stabilizing. A forced clean restart from a known state often clears whatever runaway allocation triggered the OOM. If it recurs after this restart, the device is likely RAM-constrained (check diag/power for total RAM via uptime_s and other metrics).",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "0d1fa4f1-13e3-40ec-9e4e-4f5c17f1459b",
+    "user_prompt": "Files I uploaded yesterday are missing from my Blox.",
+    "user_rating": 1
+  },
+  "upload_id": "0d1fa4f1-13e3-40ec-9e4e-4f5c17f1459b",
+  "verdict_correct": true
+}

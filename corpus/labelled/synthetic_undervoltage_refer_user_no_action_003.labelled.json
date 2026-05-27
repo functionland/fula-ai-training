@@ -1,0 +1,142 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=undervoltage_refer_user_no_action; category=runbook-section-power; variation=3; tags=runbook-power,no-action,hardware-issue",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "b52e07e0-d7a0-4f24-abbb-9c7fe9b0a75b",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>Reboots. Check diag/power for UV events.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T09:00:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "yellow"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "recent_reboots": 6,
+                "undervoltage_events_24h": 8
+              },
+              "status": "red"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 2
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/power confirms: undervoltage_events_24h=8, recent_reboots=6. Both over the 5-event threshold. Hardware power issue. NO action. Tell user about PSU/cable.</think>\nCalling diag/power to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/power"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "max_temp_c": 65.0,
+          "recent_reboots": 6,
+          "soc_voltage_ratio": 0.92,
+          "undervoltage_events_24h": 8,
+          "uptime_s": 1800
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/power confirms 8 undervoltage events in 24h and 6 recent reboots \u2014 both well over the runbook's threshold of 5. Per the runbook: 'If UV_events > 5 OR recent_reboots > 5: NO repair action. Tell user to check power cable, swap PSU, move to different outlet. Confidence: high.' Verdict: red severity, root_cause=power_supply_inadequate. NO recommendation. The verdict message will explicitly suggest: check the official 5V/4A power supply, try a different cable, plug into a different outlet (avoid powered USB hubs).</think>\nDevice has 8 undervoltage events in 24h and 6 recent reboots \u2014 strong signal of a bad PSU, bad cable, or insufficient power supply. Hardware issue; not fixable in software.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "power_supply_inadequate",
+          "severity": "red",
+          "summary": "Device has 8 undervoltage events in 24h and 6 recent reboots \u2014 strong signal of a bad PSU, bad cable, or insufficient power supply. Hardware issue; not fixable in software."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "e556afa4-1f4c-4930-81c2-4248a3f8e14d",
+    "user_prompt": "Hi \u2014 Power issues with my Blox?",
+    "user_rating": 1
+  },
+  "upload_id": "e556afa4-1f4c-4930-81c2-4248a3f8e14d",
+  "verdict_correct": true
+}

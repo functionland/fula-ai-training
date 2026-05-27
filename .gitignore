@@ -11,6 +11,12 @@ venv/
 server/_test_storage/
 **/_test_storage/
 
+# Training pipeline outputs — each run creates a fresh <YYYYMMDD-<sha>>
+# subdir holding the LoRA adapter + training_args + manifest. These are
+# build artifacts (potentially many GB of weights), not source. Republish
+# them via the publish/ workflow, don't commit.
+training/output/
+
 # Editor / OS
 .vscode/
 .idea/

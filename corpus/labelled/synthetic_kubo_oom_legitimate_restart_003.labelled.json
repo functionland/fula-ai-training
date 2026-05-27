@@ -1,0 +1,168 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=kubo_oom_legitimate_restart; category=runbook-section-containers; variation=3; tags=runbook-container,rule-9,legitimate-restart,high-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "c2c97ec2-5080-426e-83e2-b987aa1ee74d",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports sync issues. Check diag/summary; containers may be red.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T03:30:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "ipfs_host_oom": true,
+                "oom_count": 1,
+                "running_count": 6
+              },
+              "status": "red"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 86400
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 0
+              },
+              "status": "yellow"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary confirms: overall=red driven by containers.status=red with oom_count=1 and ipfs_host_oom=true in key_metrics. Internet+time+power+storage all green so this is a contained-blast container issue, not an environmental one. Heartbeat is yellow (probably degraded because ipfs_host is restarting and the heartbeat goroutine's last successful POST is aging). Drill into diag/containers to get restart_count + state for ipfs_host and decide whether docker.restart is the right call.</think>\nCalling diag/containers to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/containers"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "containers": [
+            {
+              "image": "ipfs/kubo:release",
+              "name": "ipfs_host",
+              "oom_killed": true,
+              "restart_count": 4,
+              "started_at": "2026-05-27T03:25:00Z",
+              "state": "restarting"
+            },
+            {
+              "image": "functionland/ipfs-cluster:test153",
+              "name": "ipfs_cluster",
+              "oom_killed": false,
+              "restart_count": 0,
+              "started_at": "2026-05-26T03:30:00Z",
+              "state": "running"
+            }
+          ]
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/containers shows ipfs_host: state=restarting, oom_killed=true, restart_count=4. Docker is auto-restarting after each OOM but not stabilizing \u2014 usually means a runaway allocation happens early enough in kubo init that it crosses the cgroup limit before the daemon settles. A manual docker.restart from a clean state often breaks this loop because it gives the kernel a chance to reclaim memory between the kill and the restart. Per the runbook 'Container OOM' section: 'One container OOMKilled, restart_count low: docker.restart container=<name> (tier 2). Auto-restart by Docker should already fire; this is for forcing a clean state. Confidence: high.' I'll recommend docker.restart container=ipfs_host with confidence 0.85, args.container per the whitelist constraint (must be one of the allowed container names). Tier 2. The recommendation reasoning will mention that if the restart doesn't stick (oom recurs), the device may be RAM-constrained and the user should consider whether to uninstall blox-ai to free the ~2.4 GB the model uses.</think>\nipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "ipfs_host_oom_killed",
+          "severity": "red",
+          "summary": "ipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "docker.restart",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {
+          "container": "ipfs_host"
+        },
+        "confidence": 0.85,
+        "reasoning": "ipfs_host shows oom_killed=true with restart_count=4 \u2014 docker is auto-restarting but not stabilizing. A forced clean restart from a known state often clears whatever runaway allocation triggered the OOM. If it recurs after this restart, the device is likely RAM-constrained (check diag/power for total RAM via uptime_s and other metrics).",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "0caedae1-8c85-4df8-b9e3-264c3466b1c6",
+    "user_prompt": "Hi \u2014 IPFS doesn't seem to be running on my device.",
+    "user_rating": 1
+  },
+  "upload_id": "0caedae1-8c85-4df8-b9e3-264c3466b1c6",
+  "verdict_correct": true
+}

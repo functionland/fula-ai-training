@@ -1,0 +1,175 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=cannot_earn_check_ipfs_cluster_first; category=csv-not-earning; variation=5; tags=csv-not-earning,rule-9,legitimate-restart",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "37e06701-a278-44e4-8b8f-fd9796fe5f60",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>Not-earning. CSV says check ipfs_cluster first.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T15:00:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 6
+              },
+              "status": "red"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 100000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>ipfs_cluster state=exited. That matches the CSV check. Restart it via docker.restart.</think>\nCalling diag/containers to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/containers"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "containers": [
+            {
+              "image": "functionland/ipfs-cluster:test153",
+              "name": "ipfs_cluster",
+              "oom_killed": false,
+              "restart_count": 3,
+              "started_at": "2026-05-27T10:00:00Z",
+              "state": "exited"
+            },
+            {
+              "image": "ipfs/kubo:release",
+              "name": "ipfs_host",
+              "oom_killed": false,
+              "restart_count": 0,
+              "started_at": "2026-05-26T15:00:00Z",
+              "state": "running"
+            },
+            {
+              "image": "functionland/go-fula:test153",
+              "name": "fula_go",
+              "oom_killed": false,
+              "restart_count": 0,
+              "started_at": "2026-05-26T15:00:00Z",
+              "state": "running"
+            }
+          ]
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/containers confirms ipfs_cluster.state=exited with restart_count=3. Per the user's CSV runbook this is exactly the 'ipfs_cluster not running' case for not-earning. Recommendation: docker.restart container=ipfs_cluster at confidence 0.85. The action is whitelisted and the args.container is within the allowed enum. Tier 2.</think>\nipfs_cluster is in state=exited (not running) which prevents pinning + earning. A docker.restart should bring it back; if it crashes again the cluster pebble DB may need cleanup.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "ipfs_cluster_not_running",
+          "severity": "red",
+          "summary": "ipfs_cluster is in state=exited (not running) which prevents pinning + earning. A docker.restart should bring it back; if it crashes again the cluster pebble DB may need cleanup."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "docker.restart",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {
+          "container": "ipfs_cluster"
+        },
+        "confidence": 0.85,
+        "reasoning": "Per the user's CSV runbook for not-earning: 'check if ipfs_cluster docker which runs cluster and related to earning is running'. ipfs_cluster.state=exited matches that diagnostic. docker.restart container=ipfs_cluster brings it back from a clean state.",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "not-earning",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "f37def9f-0d5c-4dcf-8fe0-38b831ddf0db",
+    "user_prompt": "Hi, ipfs_cluster looks off \u2014 my rewards aren't moving. Please help.",
+    "user_rating": 1
+  },
+  "upload_id": "f37def9f-0d5c-4dcf-8fe0-38b831ddf0db",
+  "verdict_correct": true
+}

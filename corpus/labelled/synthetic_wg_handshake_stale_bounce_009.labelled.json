@@ -1,0 +1,179 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=wg_handshake_stale_bounce; category=runbook-section-wireguard; variation=9; tags=runbook-wireguard,legitimate-action,high-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "736e1e85-10d4-4410-823f-f73deb4b59de",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports WG tunnel issue. Check diag/summary for wireguard subsystem status.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T06:00:00Z",
+          "overall": "yellow",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 86400
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": true,
+                "installed": true,
+                "last_handshake_age_sec": 600
+              },
+              "status": "red"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary shows wireguard.status=red with last_handshake_age_sec=600 in key_metrics. Drill into diag/wireguard for keepalive + transfer counts, and diag/internet to confirm WAN.</think>\nCalling diag/wireguard to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/wireguard"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "active": true,
+          "installed": true,
+          "last_handshake_age_sec": 600,
+          "persistent_keepalive_sec": 25,
+          "registered": true,
+          "rx_bytes": 12000000,
+          "tx_bytes": 8000000
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Handshake 600s, keepalive 25s \u2014 24x threshold. Internet OK. Bounce.</think>\nCalling diag/internet to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-3",
+        "payload": {
+          "args": {},
+          "tool": "diag/internet"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-3",
+        "ok": true,
+        "payload": {
+          "captive_portal_likely": false,
+          "dns_ok": true,
+          "https_discovery_ok": true,
+          "https_google_ok": true,
+          "latency_ms_avg": 35.0
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>After bounce, verify with another diag/wireguard.</think>\nWireGuard handshake is 600 seconds old (well past 3 * keepalive of 75s); tunnel is dead at protocol level even though the service reports active. Underlying internet is fine.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "wg_handshake_stale_tunnel_dead",
+          "severity": "yellow",
+          "summary": "WireGuard handshake is 600 seconds old (well past 3 * keepalive of 75s); tunnel is dead at protocol level even though the service reports active. Underlying internet is fine."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "wireguard.bounce",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {},
+        "confidence": 0.85,
+        "reasoning": "last_handshake_age_sec=600 with keepalive=25s means we're past 3x keepalive and the tunnel has dropped at protocol level. internet.https_google_ok=true confirms upstream WAN is fine, so bouncing the tunnel should re-handshake cleanly.",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "8c3f8dd1-4bc1-457e-8e98-41b6d6000cab",
+    "user_prompt": "VPN to the Blox is broken.",
+    "user_rating": 1
+  },
+  "upload_id": "8c3f8dd1-4bc1-457e-8e98-41b6d6000cab",
+  "verdict_correct": true
+}

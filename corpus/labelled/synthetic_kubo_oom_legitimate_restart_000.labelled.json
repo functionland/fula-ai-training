@@ -1,0 +1,168 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=kubo_oom_legitimate_restart; category=runbook-section-containers; variation=0; tags=runbook-container,rule-9,legitimate-restart,high-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "5a14ddc3-3f1c-4499-b491-a6a39488ef00",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports sync issues. Check diag/summary; containers may be red.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T03:30:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "ipfs_host_oom": true,
+                "oom_count": 1,
+                "running_count": 6
+              },
+              "status": "red"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 86400
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 0
+              },
+              "status": "yellow"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary confirms containers.status=red with oom_count=1 and the key_metric ipfs_host_oom=true. Drill into diag/containers for restart_count and state to decide the right action.</think>\nCalling diag/containers to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/containers"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "containers": [
+            {
+              "image": "ipfs/kubo:release",
+              "name": "ipfs_host",
+              "oom_killed": true,
+              "restart_count": 4,
+              "started_at": "2026-05-27T03:25:00Z",
+              "state": "restarting"
+            },
+            {
+              "image": "functionland/ipfs-cluster:test153",
+              "name": "ipfs_cluster",
+              "oom_killed": false,
+              "restart_count": 0,
+              "started_at": "2026-05-26T03:30:00Z",
+              "state": "running"
+            }
+          ]
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>ipfs_host: oom_killed=true, state=restarting, restart_count=4. Docker auto-restart not stabilizing. Forced clean restart should help.</think>\nipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "ipfs_host_oom_killed",
+          "severity": "red",
+          "summary": "ipfs_host (kubo) was OOM-killed; restart_count=4 indicates docker's auto-restart is firing but not stabilizing. A clean restart should help; if it recurs, the device may be RAM-constrained."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "docker.restart",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {
+          "container": "ipfs_host"
+        },
+        "confidence": 0.85,
+        "reasoning": "ipfs_host shows oom_killed=true with restart_count=4 \u2014 docker is auto-restarting but not stabilizing. A forced clean restart from a known state often clears whatever runaway allocation triggered the OOM. If it recurs after this restart, the device is likely RAM-constrained (check diag/power for total RAM via uptime_s and other metrics).",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "9d4bd4de-8ca0-4641-be1e-a1202309e271",
+    "user_prompt": "Quick question: My Blox has not been syncing files for the last hour. Thanks!",
+    "user_rating": 1
+  },
+  "upload_id": "9d4bd4de-8ca0-4641-be1e-a1202309e271",
+  "verdict_correct": true
+}
