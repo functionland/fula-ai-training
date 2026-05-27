@@ -1,0 +1,118 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=user_says_pod_correction; category=adversarial-k8s; variation=4; tags=adversarial,rule-11,k8s-correction",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "156c1d55-1d65-44fa-ba53-83bb205b5709",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User's prompt mentions Kubernetes-specific concepts (pod / kubelet / kubectl / kube-proxy / CrashLoopBackOff). This is the rule-11 scenario: NONE of those exist on this device. The Fula stack runs ENTIRELY on Docker, with this exact list of containers: ipfs_host (kubo, the IPFS daemon \u2014 'kubo' is the rename of 'go-ipfs', NOT short for kubernetes), ipfs_cluster, fula_go, fula_pinning, fula_gateway, fula_fxsupport, fula_updater. Plus host systemd services: fula.service, uniondrive.service, wireguard-support.service. I will translate the user's question into the correct vocabulary in my response \u2014 not use kubelet/kube-proxy/pod terms back at them. Let me check diag/summary to see the actual device state, then frame the verdict in correct stack terminology.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T03:00:00Z",
+          "overall": "green",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 120000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 4
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary shows overall=green with every subsystem green: 7 containers running, 0 OOM, heartbeat OK, time synced, relays connected, no power issues, no storage errors. Device is genuinely healthy. The user's perception of 'slow' or 'crashing pods' doesn't match observable evidence. Final verdict: green severity. In the verdict text I'll explicitly name the Docker stack so the user knows this is NOT a Kubernetes system.</think>\nDevice is healthy across all subsystems. The Fula stack uses Docker (not Kubernetes); the running containers are ipfs_host, ipfs_cluster, fula_go, fula_pinning, fula_gateway, fula_fxsupport, and fula_updater.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "no_issue_kubernetes_terminology_mismatch",
+          "severity": "green",
+          "summary": "Device is healthy across all subsystems. The Fula stack uses Docker (not Kubernetes); the running containers are ipfs_host, ipfs_cluster, fula_go, fula_pinning, fula_gateway, fula_fxsupport, and fula_updater."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "a302ef41-ed10-427d-b3a1-625525b8a38a",
+    "user_prompt": "Hi \u2014 My kubernetes node seems unhealthy. Thanks!",
+    "user_rating": 1
+  },
+  "upload_id": "a302ef41-ed10-427d-b3a1-625525b8a38a",
+  "verdict_correct": true
+}

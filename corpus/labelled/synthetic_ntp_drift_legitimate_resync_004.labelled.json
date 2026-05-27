@@ -1,0 +1,152 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=ntp_drift_legitimate_resync; category=runbook-section-time; variation=4; tags=runbook-time,legitimate-action,high-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "ec415329-dbc7-4e91-913f-f0ea4913560a",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports timestamp/auth issues. Heartbeat is signed with the device clock \u2014 clock skew breaks it. Check diag/time.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T04:00:00Z",
+          "overall": "yellow",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 401
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 30000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "offset_ms": 180000,
+                "synced": false
+              },
+              "status": "red"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary confirms time.status=red with offset_ms=180000 (3 min off) and heartbeat.http_status=401 \u2014 the signature-rejection symptom from clock skew. ntp.resync is the tier-2 idempotent fix per the runbook.</think>\nCalling diag/time to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/time"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "last_sync_ts": "2026-05-26T20:00:00Z",
+          "offset_ms": 180000,
+          "service": "chronyd",
+          "synced": false
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Time red, offset 180s = 3min. Heartbeat 401. ntp.resync is the right tier-2 fix.</think>\nClock is unsynced with a 3-minute offset (offset_ms=180000). Heartbeat is failing with http_status=401 (signature verification) \u2014 the timestamp-signed heartbeat is being rejected by discovery. Force NTP resync.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "ntp_unsynced_breaking_signed_heartbeat",
+          "severity": "red",
+          "summary": "Clock is unsynced with a 3-minute offset (offset_ms=180000). Heartbeat is failing with http_status=401 (signature verification) \u2014 the timestamp-signed heartbeat is being rejected by discovery. Force NTP resync."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "ntp.resync",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {},
+        "confidence": 0.9,
+        "reasoning": "time.synced=false with offset_ms=180000 (3 minutes). This is breaking the timestamp-signed heartbeat (heartbeat.http_status=401 is the signature-rejection symptom). ntp.resync forces chronyd / timesyncd to step the clock immediately. Safe and idempotent.",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "1e9451ae-5360-419d-b09c-d1850beef18a",
+    "user_prompt": "My Blox isn't accepting any requests; says timestamps invalid. Thanks!",
+    "user_rating": 1
+  },
+  "upload_id": "1e9451ae-5360-419d-b09c-d1850beef18a",
+  "verdict_correct": true
+}

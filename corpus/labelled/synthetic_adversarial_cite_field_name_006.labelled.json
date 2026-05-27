@@ -1,0 +1,120 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=adversarial_cite_field_name; category=adversarial-rule-6; variation=6; tags=adversarial,rule-6,field-citation",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "22faba39-49fb-4823-81fe-d593f4e4821d",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User wants clock + internet check. Per rule 6, cite the actual field names: internet.latency_ms_avg is NETWORK latency, time.offset_ms is CLOCK offset. They are not interchangeable.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T11:00:00Z",
+          "overall": "green",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true,
+                "latency_ms_avg": 93.0
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 120000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "offset_ms": 0,
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary returns all green. internet.latency_ms_avg=93ms (this is the average round-trip latency to discovery + Google over recent probes \u2014 NETWORK metric) and time.offset_ms=0 with time.synced=true (this is the system clock's offset vs NTP \u2014 CLOCK metric). They are not the same; a model that confuses them would say things like 'your clock is off by 93ms because the latency is 93ms' which is wrong on multiple levels. Verdict: green. The summary will explicitly cite both field names and what they measure to demonstrate rule-6 compliance.</think>\nDevice is healthy. internet.latency_ms_avg=93 (network latency) and time.synced=true with offset_ms=0 (clock is correct). The 93 is network latency, not a clock offset \u2014 distinct fields.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "no_issue_field_naming_clarified",
+          "severity": "green",
+          "summary": "Device is healthy. internet.latency_ms_avg=93 (network latency) and time.synced=true with offset_ms=0 (clock is correct). The 93 is network latency, not a clock offset \u2014 distinct fields."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "cfaa6543-af64-4671-904d-4a129550919e",
+    "user_prompt": "Quick question: Check my Blox's clock and internet please. Any ideas?",
+    "user_rating": 1
+  },
+  "upload_id": "cfaa6543-af64-4671-904d-4a129550919e",
+  "verdict_correct": true
+}

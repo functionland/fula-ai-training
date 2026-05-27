@@ -1,0 +1,49 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=vague_user_clarification_needed; category=user-question; variation=2; tags=user-question,clarification,no-tool-call-yet",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "9c158fc2-70cf-4755-a73e-7167349c17cc",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>Prompt is too vague to drill in on. Ask a clarifying user_question with choice options matching the quick-start scenario classes.</think>\nI need a bit more detail to know which diagnostic to run first.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "expected_response_type": "choice",
+          "options": [
+            "App shows my Blox as disconnected",
+            "Rewards not increasing / not earning",
+            "Can't join a pool",
+            "Something else"
+          ],
+          "question": "Which of these best describes what you're seeing?"
+        },
+        "question_id": "31981d3d-917f-4d7c-8cea-e60daac4eda2",
+        "type": "user_question"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "70bc050a-9f70-4a65-b562-de075fda3f76",
+    "user_prompt": "Hey, It's broken.",
+    "user_rating": 1
+  },
+  "upload_id": "70bc050a-9f70-4a65-b562-de075fda3f76",
+  "verdict_correct": true
+}

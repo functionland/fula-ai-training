@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "captured_at": "2026-05-27T02:13:14Z",
+    "device": "pi@192.168.2.159 (RK3588, 7.7 GB RAM, 953 GB sda1 → /uniondrive, Armbian 25.11.0 / Ubuntu 24.04)",
+    "anchored_scenario": "discovery_unreachable_but_heartbeat_green",
+    "_notes": [
+      "Captured via direct HTTP to http://127.0.0.1:8083/diag/* on the live blox-ai container.",
+      "These responses anchor synthetic 'real-lab-anchored' training examples — model trains on authentic JSON shapes, not idealized ones.",
+      "max_temp_c=99.2 is over the runbook's 80°C thermal threshold — incidentally provides a real near-throttle data point.",
+      "wireguard.installed=false because the lab device didn't opt into WG; this is the normal case for most users."
+    ]
+  },
+  "diag/summary": {
+    "overall": "red",
+    "generated_at": "2026-05-27T02:13:14.917Z",
+    "subsystems": {
+      "time":       {"status": "green",  "key_metrics": {"synced": true}},
+      "relay":      {"status": "yellow", "key_metrics": {"reservation_count": 0, "peer_count": 0}},
+      "power":      {"status": "green",  "key_metrics": {"uptime_s": 65934, "undervoltage_events_24h": 0}},
+      "heartbeat":  {"status": "green",  "key_metrics": {"http_status": 200}},
+      "wireguard":  {"status": "yellow", "key_metrics": {"active": false, "last_handshake_age_sec": -1}},
+      "storage":    {"status": "green",  "key_metrics": {"ext4_errors": 0, "dmesg_io_errors_1h": 0}},
+      "internet":   {"status": "red",    "key_metrics": {"discovery_https_ok": false, "captive_portal_likely": false, "latency_ms_avg": 75.3}},
+      "containers": {"status": "green",  "key_metrics": {"running_count": 7, "oom_count": 0}}
+    }
+  },
+  "diag/internet": {
+    "dns_ok": true,
+    "https_google_ok": true,
+    "https_discovery_ok": false,
+    "latency_ms_avg": 52.1,
+    "captive_portal_likely": false,
+    "checked_at": "2026-05-27T02:13:15.057Z"
+  },
+  "diag/relay": {
+    "relays": [],
+    "reservation_count": 0,
+    "checked_at": "2026-05-27T02:13:15.080Z"
+  },
+  "diag/time": {
+    "synced": true,
+    "offset_ms": 0.0,
+    "service": "chronyd"
+  },
+  "diag/power": {
+    "uptime_s": 65934,
+    "undervoltage_events_24h": 0,
+    "recent_reboots": 0,
+    "max_temp_c": 99.2,
+    "soc_voltage_ratio": 1.0
+  },
+  "diag/storage": {
+    "df": {
+      "/":             {"size_bytes": 15143239680,   "used_bytes": 5153800192,   "avail_bytes": 9779601408},
+      "/uniondrive":   {"size_bytes": 1006979411968, "used_bytes": 180429832192, "avail_bytes": 775322398720},
+      "/var/log/fula": {"size_bytes": 49111040,      "used_bytes": 6709248,      "avail_bytes": 38731776}
+    },
+    "ext4_errors_count": 0,
+    "dmesg_io_errors_1h": 0,
+    "smartctl_health": "unknown"
+  },
+  "diag/containers": {
+    "containers": [
+      {"name": "blox-ai",        "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/blox-ai:release",      "started_at": "2026-05-26T23:23:25.046Z"},
+      {"name": "ipfs_cluster",   "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/ipfs-cluster:test153", "started_at": "2026-05-26T23:22:27.099Z"},
+      {"name": "fula_go",        "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/go-fula:test153",      "started_at": "2026-05-26T23:22:23.906Z"},
+      {"name": "fula_pinning",   "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/fula-pinning:test153", "started_at": "2026-05-26T23:22:20.873Z"},
+      {"name": "fula_gateway",   "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/fula-gateway:test153", "started_at": "2026-05-26T23:22:17.322Z"},
+      {"name": "ipfs_host",      "state": "running", "oom_killed": false, "restart_count": 0, "image": "ipfs/kubo:release",                 "started_at": "2026-05-27T00:52:41.234Z"},
+      {"name": "fula_fxsupport", "state": "running", "oom_killed": false, "restart_count": 0, "image": "functionland/fxsupport:test153",    "started_at": "2026-05-26T23:22:06.867Z"}
+    ]
+  },
+  "diag/wireguard": {
+    "installed": false,
+    "registered": false,
+    "active": false
+  },
+  "diag/heartbeat": {
+    "last_attempt_ts": "2026-05-27T02:08:29Z",
+    "http_status": 200,
+    "last_circuit_count": 6,
+    "last_reserved_on": ["relay.dev.fx.land", "relay.fula.network"]
+  },
+  "diag/events": {
+    "events": [
+      {"ts": "2026-05-26T22:33:30.733Z", "category": "runbook_loaded",  "detail": "{\"runbook_version\":1,\"schema_version\":1}"},
+      {"ts": "2026-05-26T22:44:59.535Z", "category": "runbook_loaded",  "detail": "{\"runbook_version\":1,\"schema_version\":1}"},
+      {"ts": "2026-05-26T23:23:58.598Z", "category": "runbook_loaded",  "detail": "{\"runbook_version\":1,\"schema_version\":1}"}
+    ]
+  },
+  "diag/readiness": {
+    "recent_log": ""
+  }
+}

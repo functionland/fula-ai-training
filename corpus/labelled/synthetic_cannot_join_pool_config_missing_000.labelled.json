@@ -1,0 +1,118 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=cannot_join_pool_config_missing; category=csv-not-earning; variation=0; tags=csv-cannot-join-pool,null-action,user-side-action",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "41a0b684-67c9-423c-ba98-8554aa590209",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User asks about pool join. Per the user's CSV runbook: 'if pool_id is not set to 1, then the user is not joined the pool and they need to manually in the app go to settings > pools and join the pool'. Check diag/summary to confirm device is healthy, then explain pool membership flow.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T14:00:00Z",
+          "overall": "green",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 100000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/summary confirms green across the board \u2014 there's no Blox-side issue. Verdict: green severity, root_cause='no_blox_issue_user_must_join_via_app'. The summary text will explicitly mention the in-app flow: 'Open the app \u2192 Settings \u2192 Pools \u2192 tap your pool to join'. NO recommendation \u2014 there's no diag/* failure to act on, and no whitelisted action covers 'remind the user to tap a button in the app'.</think>\nDevice is healthy across all subsystems \u2014 there is no Blox-side issue blocking pool join. Pool membership is set via the app's Settings > Pools flow, which writes pool_id into config.yaml on the device. If the user expected to be joined but isn't, they likely haven't completed the in-app pool-selection step.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "no_blox_issue_user_must_join_via_app",
+          "severity": "green",
+          "summary": "Device is healthy across all subsystems \u2014 there is no Blox-side issue blocking pool join. Pool membership is set via the app's Settings > Pools flow, which writes pool_id into config.yaml on the device. If the user expected to be joined but isn't, they likely haven't completed the in-app pool-selection step."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "cannot-join-pool",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "75723cf4-610f-41c7-a21b-6bd0be239a74",
+    "user_prompt": "I can't join the pool from my Blox.",
+    "user_rating": 1
+  },
+  "upload_id": "75723cf4-610f-41c7-a21b-6bd0be239a74",
+  "verdict_correct": true
+}

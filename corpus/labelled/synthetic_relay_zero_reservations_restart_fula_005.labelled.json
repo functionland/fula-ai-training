@@ -1,0 +1,187 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=relay_zero_reservations_restart_fula; category=runbook-section-relay; variation=5; tags=runbook-relay,csv-not-earning,medium-confidence",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "0f3a2740-d0b2-4fd3-8b52-c05965b5b88c",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports not-earning. Per the runbook 'Relay reachability' section and the user's CSV, the first sanity check is whether the device is reachable via libp2p relays. Zero reservations = blox is unreachable from outside the LAN. Run diag/summary, then drill into diag/relay and diag/internet (run internet diag first to confirm WAN works \u2014 otherwise it's not a relay issue).</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T10:00:00Z",
+          "overall": "yellow",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 86400
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "peer_count": 0,
+                "reservation_count": 0
+              },
+              "status": "red"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Zero reservations, internet OK. Restart_fula to re-register.</think>\nCalling diag/relay to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/relay"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "relays": [
+            {
+              "addr": "relay.fula.network",
+              "has_circuit_reservation": false,
+              "latency_ms": 0,
+              "swarm_connect_ok": false
+            },
+            {
+              "addr": "relay.dev.fx.land",
+              "has_circuit_reservation": false,
+              "latency_ms": 0,
+              "swarm_connect_ok": false
+            }
+          ],
+          "reservation_count": 0
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Confirmed: 0 reservations, internet is fine, discovery reachable. Per runbook, restart_fula tier-2 to force re-registration. Medium confidence (0.6) \u2014 runbook caps confidence here.</think>\nCalling diag/internet to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-3",
+        "payload": {
+          "args": {},
+          "tool": "diag/internet"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-3",
+        "ok": true,
+        "payload": {
+          "captive_portal_likely": false,
+          "dns_ok": true,
+          "https_discovery_ok": true,
+          "https_google_ok": true,
+          "latency_ms_avg": 60.0
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Confirmed: 0 reservations, internet is fine, discovery reachable. Per runbook, restart_fula tier-2 to force re-registration. Medium confidence (0.6) \u2014 runbook caps confidence here.</think>\nBlox has zero circuit reservations on relays but underlying internet + discovery are healthy. A restart of the fula stack typically re-registers with relays cleanly.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "relay_registration_stale_no_circuits",
+          "severity": "yellow",
+          "summary": "Blox has zero circuit reservations on relays but underlying internet + discovery are healthy. A restart of the fula stack typically re-registers with relays cleanly."
+        },
+        "type": "verdict"
+      },
+      {
+        "action_id": "ra-1",
+        "action_name": "restart_fula",
+        "approval_token": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        "args": {},
+        "confidence": 0.6,
+        "reasoning": "Zero circuit reservations (relay.reservation_count=0) but underlying internet (https_discovery_ok=true) is fine. The fula stack's relay-registration goroutine sometimes gets stuck after a long uptime; restart_fula forces a clean re-registration. Tier-2 idempotent.",
+        "tier": 2,
+        "type": "recommended_action"
+      }
+    ],
+    "scenario_id": "not-earning",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "c86201a2-4800-4c35-a3f3-cd8a69e1c47c",
+    "user_prompt": "Hey, My Blox isn't earning rewards. Please help.",
+    "user_rating": 1
+  },
+  "upload_id": "c86201a2-4800-4c35-a3f3-cd8a69e1c47c",
+  "verdict_correct": true
+}

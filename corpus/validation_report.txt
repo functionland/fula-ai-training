@@ -1,0 +1,56 @@
+# Synthetic dataset generation report
+Generated at: 2026-05-27T02:34:34Z
+Output dir: E:\GitHub\fula-ai-training\corpus\labelled
+
+## Counts
+  Scenarios processed: 17
+  Examples generated:  174
+  Examples written:    174
+  Examples rejected:   0
+
+## Per-scenario counts
+  adversarial_cite_field_name                        8
+  adversarial_relay_yellow_no_overreact              8
+  cannot_earn_check_ipfs_cluster_first               10
+  cannot_join_pool_config_missing                    10
+  captive_portal_no_action                           10
+  disconnected_heartbeat_green_real_lab              14
+  ext4_errors_refer_user_no_action                   10
+  false_positive_restart_fula_blocked                10
+  healthy_no_action_needed                           12
+  kubo_oom_legitimate_restart                        10
+  multi_turn_drill_in_cluster_pebble                 10
+  ntp_drift_legitimate_resync                        10
+  relay_zero_reservations_restart_fula               10
+  undervoltage_refer_user_no_action                  10
+  user_says_pod_correction                           14
+  vague_user_clarification_needed                    8
+  wg_handshake_stale_bounce                          10
+
+## Per-category counts
+  adversarial-k8s                14
+  adversarial-rule-10            8
+  adversarial-rule-6             8
+  adversarial-rule-8             10
+  csv-not-earning                20
+  null-action                    12
+  real-lab-anchored              14
+  runbook-section-containers     20
+  runbook-section-internet       10
+  runbook-section-power          10
+  runbook-section-relay          10
+  runbook-section-storage        10
+  runbook-section-time           10
+  runbook-section-wireguard      10
+  user-question                  8
+
+## Severity distribution
+  green      52
+  yellow     52
+  red        70
+
+## Recommendation-action distribution
+  docker.restart                 30
+  ntp.resync                     10
+  restart_fula                   10
+  wireguard.bounce               10

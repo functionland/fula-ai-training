@@ -1,0 +1,171 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=disconnected_heartbeat_green_real_lab; category=real-lab-anchored; variation=2; tags=real-lab,heartbeat_green_trap,rule-8,no-action",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "eb1605d0-4cf1-4b4d-9618-c0417b191365",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports disconnect. Before recommending any restart, check heartbeat: if the device is posting successfully to discovery.fula.network, then 'disconnect' is phone-side or relay-side, not device-side. Per rule 8 I should ASK before restarting on a contradiction. Starting with diag/summary to see the big picture.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T02:13:14.917Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "captive_portal_likely": false,
+                "discovery_https_ok": false,
+                "latency_ms_avg": 75.3
+              },
+              "status": "red"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 65934
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "peer_count": 0,
+                "reservation_count": 0
+              },
+              "status": "yellow"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "yellow"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>Heartbeat is green (http_status 200, last_attempt 5min ago). Device IS posting. Check internet next.</think>\nCalling diag/heartbeat to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/heartbeat"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "http_status": 200,
+          "last_attempt_ts": "2026-05-27T02:08:29Z",
+          "last_circuit_count": 6,
+          "last_reserved_on": [
+            "relay.dev.fx.land",
+            "relay.fula.network"
+          ]
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>DNS works, Google reachable, discovery blocked. Not captive (Google works). Upstream block.</think>\nCalling diag/internet to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-3",
+        "payload": {
+          "args": {},
+          "tool": "diag/internet"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-3",
+        "ok": true,
+        "payload": {
+          "captive_portal_likely": false,
+          "dns_ok": true,
+          "https_discovery_ok": false,
+          "https_google_ok": true,
+          "latency_ms_avg": 52.1
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/internet confirms: dns_ok=true, https_google_ok=true, https_discovery_ok=false, captive_portal_likely=false. Pattern is clear \u2014 the network allows general internet but blocks discovery.fula.network specifically. Could be ISP filtering, country-level block, corporate firewall rule, or transient outage of discovery infra. None of these are fixable by restarting the blox. Verdict: device healthy, network-side block.</think>\nBlox can reach the internet but discovery.fula.network is blocked from this network. Device itself is posting heartbeats successfully (heartbeat.http_status=200).",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "discovery_unreachable_upstream",
+          "severity": "yellow",
+          "summary": "Blox can reach the internet but discovery.fula.network is blocked from this network. Device itself is posting heartbeats successfully (heartbeat.http_status=200)."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "disconnected",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "50a55ab7-4937-4b67-a792-4d9d71501812",
+    "user_prompt": "Quick question: App says my device is disconnected but I'm right next to it. Any ideas?",
+    "user_rating": 1
+  },
+  "upload_id": "50a55ab7-4937-4b67-a792-4d9d71501812",
+  "verdict_correct": true
+}

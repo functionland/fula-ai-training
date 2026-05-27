@@ -1,0 +1,49 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=vague_user_clarification_needed; category=user-question; variation=5; tags=user-question,clarification,no-tool-call-yet",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "09ca3fcc-843d-43bc-afd0-8d50a0a2263d",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User's prompt is too vague to action \u2014 could mean anything. Per the runbook section on user_question: 'Most of the time you should NOT ask the user a question \u2014 calling a diag/* tool is faster... ONLY when the symptom is genuinely ambiguous and the answer would change which diag/* tool you call next.' This is exactly that case. Best to ask one clarifying question with choice options matching the canonical scenario classes (disconnected, not earning, can't join pool, freeform/other) \u2014 that maps to which diag-walk to start.</think>\nI need a bit more detail to know which diagnostic to run first.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "expected_response_type": "choice",
+          "options": [
+            "App shows my Blox as disconnected",
+            "Rewards not increasing / not earning",
+            "Can't join a pool",
+            "Something else"
+          ],
+          "question": "Which of these best describes what you're seeing?"
+        },
+        "question_id": "0746addd-c3fc-4a32-87fd-963effff1e03",
+        "type": "user_question"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "a99a85dc-a123-41bf-9abd-6576175e844e",
+    "user_prompt": "Hmm, problem. Please help.",
+    "user_rating": 1
+  },
+  "upload_id": "a99a85dc-a123-41bf-9abd-6576175e844e",
+  "verdict_correct": true
+}

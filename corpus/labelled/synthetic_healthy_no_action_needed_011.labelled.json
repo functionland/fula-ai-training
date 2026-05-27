@@ -1,0 +1,118 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=healthy_no_action_needed; category=null-action; variation=11; tags=null-action,healthy,no-recommendation",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "00f100f7-8e59-4d43-a157-4eb3fd41c3be",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User asked for a routine health check. The runbook is clear: if everything is green, the verdict is green and there is NO recommendation. Per rule (implicit but critical): don't invent fixes when nothing is broken. A model trained to always recommend something is a model that creates problems on healthy devices. Run diag/summary and expect green across the board.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T05:00:00Z",
+          "overall": "green",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "green"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 432000
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 3
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>All green. No action needed. Verdict green.</think>\nDevice is healthy: all subsystems green, heartbeat posting successfully, 3 active relay reservations, no container restarts.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "no_issue",
+          "severity": "green",
+          "summary": "Device is healthy: all subsystems green, heartbeat posting successfully, 3 active relay reservations, no container restarts."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "66d71568-ad33-4eef-ab56-56e6605419de",
+    "user_prompt": "Status check.",
+    "user_rating": 1
+  },
+  "upload_id": "66d71568-ad33-4eef-ab56-56e6605419de",
+  "verdict_correct": true
+}

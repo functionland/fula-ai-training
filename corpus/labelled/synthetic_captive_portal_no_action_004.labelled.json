@@ -1,0 +1,144 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=captive_portal_no_action; category=runbook-section-internet; variation=4; tags=runbook-internet,no-action,captive-portal",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "56a8ca42-4998-424d-879d-86cdad2d21b8",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>New wifi + cannot reach. Check diag/internet for captive_portal_likely.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T08:00:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "green"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "captive_portal_likely": true,
+                "discovery_https_ok": false,
+                "latency_ms_avg": 15
+              },
+              "status": "red"
+            },
+            "power": {
+              "key_metrics": {
+                "undervoltage_events_24h": 0,
+                "uptime_s": 7200
+              },
+              "status": "green"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 0
+              },
+              "status": "red"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/internet: dns_ok=true, https_google_ok=false, captive_portal_likely=true. Captive portal confirmed. NO blox action \u2014 user must auth in browser.</think>\nCalling diag/internet to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/internet"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "captive_portal_likely": true,
+          "dns_ok": true,
+          "https_discovery_ok": false,
+          "https_google_ok": false,
+          "latency_ms_avg": 15.0
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/internet: dns_ok=true, https_google_ok=false, captive_portal_likely=true. Captive portal confirmed. NO blox action \u2014 user must auth in browser.</think>\nNetwork has a captive portal active (HTTPS to public sites is intercepted). User needs to sign into the wifi captive portal from a browser to unblock the network for the Blox.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "captive_portal_unauthenticated",
+          "severity": "red",
+          "summary": "Network has a captive portal active (HTTPS to public sites is intercepted). User needs to sign into the wifi captive portal from a browser to unblock the network for the Blox."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "disconnected",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "9b689b4c-d8a8-4094-9a32-6a933ce6e575",
+    "user_prompt": "Public wifi is interfering with my Blox.",
+    "user_rating": 1
+  },
+  "upload_id": "9b689b4c-d8a8-4094-9a32-6a933ce6e575",
+  "verdict_correct": true
+}

@@ -1,0 +1,142 @@
+{
+  "actions_correct": true,
+  "label_decision": "accept",
+  "labelled_at": "2026-05-27T02:34:34Z",
+  "notes": "synthetic v1; scenario=undervoltage_refer_user_no_action; category=runbook-section-power; variation=8; tags=runbook-power,no-action,hardware-issue",
+  "root_cause_correct": true,
+  "transcript": {
+    "consent": {
+      "anonymizer_version": "1.0.0",
+      "explicit_opt_in": true,
+      "preview_shown": true
+    },
+    "device_class": "rk3588",
+    "events": [
+      {
+        "protocol_version": 3,
+        "session_id": "982ea87d-bd69-4648-8d92-5596551a893a",
+        "ttl_seconds": 1800,
+        "type": "session_started"
+      },
+      {
+        "payload": "<think>User reports random reboots. Per the runbook 'Power / undervoltage / brownout' section: the diagnostic order is diag/power for undervoltage_events_24h and recent_reboots. If undervoltage_events > 5 OR recent_reboots > 5: NO repair action; tell user to check power cable, swap PSU, move to different outlet. This is almost always physical \u2014 AI must not propose a software fix.</think>\nCalling diag/summary to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-1",
+        "payload": {
+          "args": {},
+          "tool": "diag/summary"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-1",
+        "ok": true,
+        "payload": {
+          "generated_at": "2026-05-27T09:00:00Z",
+          "overall": "red",
+          "subsystems": {
+            "containers": {
+              "key_metrics": {
+                "oom_count": 0,
+                "running_count": 7
+              },
+              "status": "yellow"
+            },
+            "heartbeat": {
+              "key_metrics": {
+                "http_status": 200
+              },
+              "status": "yellow"
+            },
+            "internet": {
+              "key_metrics": {
+                "discovery_https_ok": true
+              },
+              "status": "green"
+            },
+            "power": {
+              "key_metrics": {
+                "recent_reboots": 6,
+                "undervoltage_events_24h": 8
+              },
+              "status": "red"
+            },
+            "relay": {
+              "key_metrics": {
+                "reservation_count": 2
+              },
+              "status": "green"
+            },
+            "storage": {
+              "key_metrics": {
+                "dmesg_io_errors_1h": 0,
+                "ext4_errors": 0
+              },
+              "status": "green"
+            },
+            "time": {
+              "key_metrics": {
+                "synced": true
+              },
+              "status": "green"
+            },
+            "wireguard": {
+              "key_metrics": {
+                "active": false,
+                "last_handshake_age_sec": -1
+              },
+              "status": "green"
+            }
+          }
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/power confirms 8 undervoltage events in 24h and 6 recent reboots \u2014 both well over the runbook's threshold of 5. Per the runbook: 'If UV_events > 5 OR recent_reboots > 5: NO repair action. Tell user to check power cable, swap PSU, move to different outlet. Confidence: high.' Verdict: red severity, root_cause=power_supply_inadequate. NO recommendation. The verdict message will explicitly suggest: check the official 5V/4A power supply, try a different cable, plug into a different outlet (avoid powered USB hubs).</think>\nCalling diag/power to gather data.",
+        "type": "thought"
+      },
+      {
+        "call_id": "tc-2",
+        "payload": {
+          "args": {},
+          "tool": "diag/power"
+        },
+        "type": "tool_call"
+      },
+      {
+        "call_id": "tc-2",
+        "ok": true,
+        "payload": {
+          "max_temp_c": 65.0,
+          "recent_reboots": 6,
+          "soc_voltage_ratio": 0.92,
+          "undervoltage_events_24h": 8,
+          "uptime_s": 1800
+        },
+        "type": "tool_result"
+      },
+      {
+        "payload": "<think>diag/power confirms 8 undervoltage events in 24h and 6 recent reboots \u2014 both well over the runbook's threshold of 5. Per the runbook: 'If UV_events > 5 OR recent_reboots > 5: NO repair action. Tell user to check power cable, swap PSU, move to different outlet. Confidence: high.' Verdict: red severity, root_cause=power_supply_inadequate. NO recommendation. The verdict message will explicitly suggest: check the official 5V/4A power supply, try a different cable, plug into a different outlet (avoid powered USB hubs).</think>\nDevice has 8 undervoltage events in 24h and 6 recent reboots \u2014 strong signal of a bad PSU, bad cable, or insufficient power supply. Hardware issue; not fixable in software.",
+        "type": "thought"
+      },
+      {
+        "payload": {
+          "root_cause": "power_supply_inadequate",
+          "severity": "red",
+          "summary": "Device has 8 undervoltage events in 24h and 6 recent reboots \u2014 strong signal of a bad PSU, bad cable, or insufficient power supply. Hardware issue; not fixable in software."
+        },
+        "type": "verdict"
+      }
+    ],
+    "scenario_id": "freeform",
+    "schema_version": 1,
+    "session_relative_start": "+0s",
+    "upload_id": "0877649d-4eaf-4063-bfb7-073856855d97",
+    "user_prompt": "Power issues with my Blox?",
+    "user_rating": 1
+  },
+  "upload_id": "0877649d-4eaf-4063-bfb7-073856855d97",
+  "verdict_correct": true
+}
