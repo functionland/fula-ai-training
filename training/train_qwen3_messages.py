@@ -143,6 +143,7 @@ class TrainConfig:
     tokenizer_pad_to_multiple_of: int
     validation_fraction: float
     eval_steps: int
+    eval_strategy: str  # "no" | "steps" | "epoch" — "no" disables in-training eval
     seed: int
 
     @classmethod
@@ -189,6 +190,11 @@ class TrainConfig:
             tokenizer_pad_to_multiple_of=int(tok.get("pad_to_multiple_of", 8)),
             validation_fraction=float(ev.get("validation_fraction", 0.1)),
             eval_steps=int(ev.get("eval_steps", 100)),
+            # Default "no" — in-training eval OOMs on T4 (logits.float() needs
+            # ~8 GiB at batch=2, seq_len=4096, vocab=152k). Set to "steps"
+            # only on a >24 GB GPU. The held-out eval against corpus/test_set/
+            # is the proper evaluation either way.
+            eval_strategy=str(ev.get("strategy", "no")),
             seed=int(rep.get("seed", 42)),
         )
 
@@ -509,7 +515,7 @@ def train(cfg: TrainConfig, dry_run: bool = False) -> Path:
         save_steps=cfg.save_steps,
         save_total_limit=cfg.save_total_limit,
         bf16=cfg.bf16,
-        eval_strategy="steps",
+        eval_strategy=cfg.eval_strategy,
         eval_steps=cfg.eval_steps,
         seed=cfg.seed,
         report_to="none",

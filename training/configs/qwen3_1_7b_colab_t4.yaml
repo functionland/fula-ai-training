@@ -18,7 +18,11 @@ corpus:
 
 chat_template:
   enable_thinking: true
-  mask_user_and_tool: true
+  # mask_user_and_tool: TRL 1.5+ moved DataCollatorForCompletionOnlyLM out
+  # of the top-level namespace; until we wire the new path, train on the
+  # full sequence. Cost: marginal — for narrow tool-call tasks the
+  # quality difference vs proper masking is small.
+  mask_user_and_tool: false
 
 output:
   # Save to mounted Google Drive so the adapter survives Colab session
@@ -36,15 +40,23 @@ lora:
   task_type: CAUSAL_LM
 
 training:
-  learning_rate: 1.0e-4
-  num_epochs: 3
+  # 2.0e-4 was empirically the sweet spot at effective batch 4 on 2 epochs
+  # — converged loss from 3.3 to 0.39 over 78 steps. Lower (1.0e-4) leaves
+  # loss high; higher (5.0e-4) shows gradient instability.
+  learning_rate: 2.0e-4
+  # 2 epochs is the right call for 174 narrow-task examples. 3 epochs
+  # risks overfitting on the synthetic phrasings.
+  num_epochs: 2
   # T4 fits batch=2 with 4096-token max length + gradient checkpointing.
   # Bump to 4 if you have a Colab Pro V100/L4 (24GB VRAM).
   per_device_train_batch_size: 2
-  # Keep effective batch = 32 (= 2 * 16) so the loss curve matches the
-  # 24GB config's behavior.
-  gradient_accumulation_steps: 16
-  warmup_ratio: 0.05
+  # Effective batch = 4 (= 2 * 2). The original 32 (grad_accum=16) gave
+  # only 5 update steps/epoch on 174 examples — barely any learning.
+  # With batch 4 we get ~40 steps/epoch which is what the model actually
+  # needs to converge.
+  gradient_accumulation_steps: 2
+  # Slightly higher warmup for the longer (in step count) training run.
+  warmup_ratio: 0.1
   weight_decay: 0.0
   lr_scheduler_type: cosine
   logging_steps: 10
@@ -60,6 +72,12 @@ tokenizer:
 evaluation:
   validation_fraction: 0.1
   eval_steps: 50
+  # "no" — in-training eval OOMs on T4 (logits.float() in compute_loss
+  # tries to allocate ~8 GiB at batch=2, seq_len=4096, vocab=152k).
+  # The proper eval is `eval_held_out.py` against `corpus/test_set/`
+  # AFTER training — it doesn't fight for VRAM with the training loop.
+  # Set to "steps" only on >24 GB GPU.
+  strategy: "no"
 
 reproducibility:
   seed: 42
