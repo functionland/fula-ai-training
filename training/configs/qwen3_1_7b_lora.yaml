@@ -9,7 +9,12 @@
 # rank-16 is plenty for the narrow tool-call + structured-XML task.
 
 base_model:
-  hf_id: Qwen/Qwen3-1.7B-Instruct
+  # Qwen 3 doesn't use the -Instruct suffix (the Qwen3 family is
+  # instruction-tuned by default — only the -Base variant is the
+  # non-instruct one). Use Qwen/Qwen3-1.7B for chat / tool-call
+  # fine-tuning; Qwen/Qwen3-1.7B-Base if you specifically need the
+  # raw pretrained checkpoint.
+  hf_id: Qwen/Qwen3-1.7B
   # Set to a local path if the GPU box has the weights cached + offline
   local_dir: null
 

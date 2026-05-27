@@ -1,0 +1,68 @@
+# Phase 19.4 — Qwen 3 1.7B LoRA fine-tune config sized for Colab Free T4.
+#
+# Sibling to qwen3_1_7b_lora.yaml (which is sized for a 24GB A10G/A100).
+# This config halves the batch size + quadruples gradient accumulation
+# so the effective batch stays at 32, but per-step VRAM usage fits in
+# the T4's 15 GB. Output goes to Google Drive so the LoRA adapter
+# survives the Colab session ending.
+#
+# Used by the Colab quickstart notebook flow in training/colab/QUICKSTART.md.
+
+base_model:
+  hf_id: Qwen/Qwen3-1.7B
+  local_dir: null
+
+corpus:
+  labelled_dir: corpus/labelled
+  min_transcripts: 100
+
+chat_template:
+  enable_thinking: true
+  mask_user_and_tool: true
+
+output:
+  # Save to mounted Google Drive so the adapter survives Colab session
+  # disconnects. Change to /content/output if you don't want Drive
+  # mounting (but then download the adapter before the session ends).
+  root: /content/drive/MyDrive/blox-ai-training
+  use_git_sha: true
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+  bias: none
+  task_type: CAUSAL_LM
+
+training:
+  learning_rate: 1.0e-4
+  num_epochs: 3
+  # T4 fits batch=2 with 4096-token max length + gradient checkpointing.
+  # Bump to 4 if you have a Colab Pro V100/L4 (24GB VRAM).
+  per_device_train_batch_size: 2
+  # Keep effective batch = 32 (= 2 * 16) so the loss curve matches the
+  # 24GB config's behavior.
+  gradient_accumulation_steps: 16
+  warmup_ratio: 0.05
+  weight_decay: 0.0
+  lr_scheduler_type: cosine
+  logging_steps: 10
+  save_steps: 50
+  save_total_limit: 3
+  bf16: true                  # T4 supports bf16 since CUDA 11.x
+  gradient_checkpointing: true
+
+tokenizer:
+  max_length: 4096
+  pad_to_multiple_of: 8
+
+evaluation:
+  validation_fraction: 0.1
+  eval_steps: 50
+
+reproducibility:
+  seed: 42
+
+deepspeed:
+  enabled: false
