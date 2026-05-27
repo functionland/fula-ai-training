@@ -6,6 +6,8 @@ This directory is the SFT corpus the LoRA trainer consumes. It contains `*.label
 
 2. **Real** (any other `<upload_id>.labelled.json`) — written by the operator via `labeller/app.py` after reviewing anonymized transcripts uploaded through the Phase 21 opt-in path. Schema identical to synthetic so the trainer doesn't care which is which.
 
+**For the full operational workflow** (how new real transcripts become a new published model, how to iterate with Claude assistance, how to interpret eval reports, how to roll back): see [`OPERATIONS.md`](../../OPERATIONS.md) at the repo root, especially the "Iteration loop — turning new logs into a better model" section.
+
 ## Training
 
 Use the multi-turn ChatML-aware trainer for Qwen 3:
