@@ -263,6 +263,45 @@ def test_persisted_file_has_no_request_metadata(client):
 # Cross-runtime drift gate (Phase 21 advisor catch)
 # ---------------------------------------------------------------------------
 
+def test_optional_user_prompt_and_scenario_id_accepted(client):
+    """New 2026-05-26 fields: user_prompt + scenario_id let the operator
+    know what the user actually asked + which quick-start scenario they
+    tapped. Both optional — backward compatible with old app builds."""
+    body = _good_transcript()
+    body["user_prompt"] = "My Blox is showing as disconnected in the app."
+    body["scenario_id"] = "disconnected"
+    r = client.post("/transcripts", json=body)
+    assert r.status_code == 200, (
+        f"expected 200 for valid payload with user_prompt + scenario_id, "
+        f"got {r.status_code}: {r.text}"
+    )
+
+
+def test_scenario_id_enum_enforced(client):
+    """scenario_id must be one of {disconnected, not-earning, cannot-join-pool, freeform}."""
+    body = _good_transcript()
+    body["scenario_id"] = "random-string-not-in-enum"
+    r = client.post("/transcripts", json=body)
+    assert r.status_code == 400
+
+
+def test_user_prompt_length_capped(client):
+    """user_prompt over 2000 chars must be rejected (matches comment cap)."""
+    body = _good_transcript()
+    body["user_prompt"] = "x" * 2001
+    r = client.post("/transcripts", json=body)
+    assert r.status_code == 400
+
+
+def test_payload_without_user_prompt_still_accepted(client):
+    """Backward compat: payloads from older app builds (no user_prompt
+    field) keep working."""
+    body = _good_transcript()
+    # Note: _good_transcript does NOT include user_prompt or scenario_id.
+    r = client.post("/transcripts", json=body)
+    assert r.status_code == 200
+
+
 def test_canonical_js_anonymizer_output_is_accepted(client):
     """Hard contract between the JS on-device anonymizer (apps/box/src/utils/
     anonymizeTranscript.ts) and this Python server. The fixture file is the

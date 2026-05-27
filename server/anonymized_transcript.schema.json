@@ -44,6 +44,15 @@
       "maxLength": 2000,
       "description": "Optional. User's freeform comment from the feedback modal. Phone-side anonymizer should have stripped path/SSID-looking substrings; server scans defense-in-depth."
     },
+    "user_prompt": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Optional. The original prompt that started the AI session — either a canonical quick-start prompt ('My Blox is showing as disconnected...') or the user's freeform text. Phone-side anonymizer strips path/SSID/IP/peer-id patterns before upload; server PII scanner runs defense-in-depth. Critical context for the operator: a verdict + recommended_action without the original ask is hard to evaluate."
+    },
+    "scenario_id": {
+      "enum": ["disconnected", "not-earning", "cannot-join-pool", "freeform"],
+      "description": "Optional. Which quick-start scenario the user tapped, or 'freeform' if they typed their own prompt. Lets the operator filter analytics by symptom class without re-parsing the English prompt text."
+    },
     "consent": {
       "type": "object",
       "additionalProperties": false,
