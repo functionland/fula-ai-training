@@ -21,6 +21,7 @@ import json
 import logging
 import os
 import time
+import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -49,6 +50,12 @@ _VALIDATOR = jsonschema.Draft202012Validator(_SCHEMA)
 RATE_LIMIT_WINDOW_SEC = int(os.environ.get("BLOX_AI_RATE_WINDOW_SEC", "86400"))
 RATE_LIMIT_PER_IP_PER_WINDOW = int(os.environ.get("BLOX_AI_RATE_PER_IP", "50"))
 GLOBAL_RATE_LIMIT_PER_WINDOW = int(os.environ.get("BLOX_AI_GLOBAL_RATE", "10000"))
+
+# Diagnostics bundles are bounded (one diag/bundle snapshot + a small phone
+# block) so a tight cap is fine; env-overridable for headroom.
+DIAGNOSTICS_MAX_BYTES = int(
+    os.environ.get("BLOX_AI_DIAGNOSTICS_MAX_BYTES", str(256 * 1024))
+)
 
 
 _ip_buckets: dict[str, deque] = defaultdict(deque)
@@ -260,6 +267,107 @@ async def post_transcript(request: Request) -> Response:
     return JSONResponse(status_code=status.HTTP_200_OK, content={})
 
 
+@app.post("/diagnostics")
+async def post_diagnostics(request: Request) -> Response:
+    """Receive a user-shared device diagnostics bundle for support.
+
+    Distinct from /transcripts:
+      - NO find_pii gate. Diagnostics deliberately carry identifiers the
+        user chose to share (blox kubo/cluster peer ids, app peer id) so
+        support can correlate the device — that is the whole point.
+      - No transcript JSON-Schema. Minimal structural checks only.
+      - Size-capped at DIAGNOSTICS_MAX_BYTES; the bundle is bounded.
+
+    Shares the per-IP rate limiter, the UUID-keyed storage tree, and the
+    admin inbox (source='diagnostics') with /transcripts so support has one
+    portal for both.
+    """
+    client_ip = _client_ip(request)
+    now = time.time()
+
+    # 1. Rate-limit BEFORE buffering the body.
+    if not _check_rate_limit(client_ip, now):
+        logger.info("rate_limit ip=%s path=/diagnostics", _hash_ip(client_ip))
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={"error": "rate_limit"},
+        )
+
+    # 2. Body-size cap (two layers, mirroring admin.py): cheap Content-Length
+    #    precheck + authoritative after-read length check.
+    cl = request.headers.get("content-length")
+    if cl is not None:
+        try:
+            if int(cl) > DIAGNOSTICS_MAX_BYTES:
+                return JSONResponse(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    content={"error": "body_too_large"},
+                )
+        except ValueError:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": "body_invalid"},
+            )
+    raw = await request.body()
+    if len(raw) > DIAGNOSTICS_MAX_BYTES:
+        return JSONResponse(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            content={"error": "body_too_large"},
+        )
+
+    # 3. Parse + minimal structural validation (no schema, no PII scan).
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "body_invalid"},
+        )
+    if not isinstance(payload, dict):
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "body_invalid"},
+        )
+    if payload.get("kind") != "diagnostics":
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "body_invalid"},
+        )
+    upload_id = payload.get("upload_id")
+    if not _is_canonical_uuid(upload_id):
+        # Reject early with a clean 400 rather than letting write_transcript
+        # raise StorageError (which would surface as 500).
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"error": "body_invalid"},
+        )
+
+    # 4. Persist (idempotent on upload_id; same UUID-keyed tree).
+    try:
+        result = _storage.write_transcript(upload_id, payload)
+    except StorageError:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"error": "storage_unavailable"},
+        )
+
+    # 5. Track in the issue DB (source='diagnostics'). Non-fatal on failure —
+    # the bundle is already on disk and the migration will pick it up.
+    if _db_conn is not None:
+        try:
+            issue_db.upsert_diagnostics_issue(
+                _db_conn, upload_id, storage_key=result.storage_key,
+                summary=_diagnostics_summary(payload),
+            )
+        except Exception as e:  # noqa: BLE001
+            logger.warning("issue_db diagnostics upsert failed (non-fatal) "
+                            "upload_id=%s: %s", upload_id, e)
+
+    logger.info("diagnostics persisted upload_id=%s written=%s key=%s",
+                upload_id, result.written, result.storage_key)
+    return JSONResponse(status_code=status.HTTP_200_OK, content={})
+
+
 # ---------------------------------------------------------------------------
 # Rate-limit + IP-handling helpers
 # ---------------------------------------------------------------------------
@@ -285,6 +393,32 @@ def _hash_ip(ip: str) -> str:
     """Stable short hash for log correlation. We never log the raw IP."""
     import hashlib
     return hashlib.sha256(ip.encode("utf-8")).hexdigest()[:12]
+
+
+def _is_canonical_uuid(s: Any) -> bool:
+    """True iff s is a canonical lowercase 36-char UUID string. Matches the
+    strict check in storage._looks_like_uuid (uppercase or hyphen-less hex
+    is rejected) so the diagnostics handler bounces a bad upload_id with a
+    clean 400 instead of a StorageError-driven 500."""
+    if not isinstance(s, str):
+        return False
+    try:
+        return str(uuid.UUID(s)) == s
+    except (ValueError, AttributeError):
+        return False
+
+
+def _diagnostics_summary(payload: dict) -> str:
+    """One-line label for the admin inbox row. Defensive: tolerates a
+    partial/odd-shaped bundle since this is best-effort metadata, not a
+    contract gate."""
+    gen = payload.get("generated_at") or "?"
+    phone = payload.get("phone")
+    kubo = ""
+    if isinstance(phone, dict):
+        kubo = phone.get("blox_kubo_peer_id") or ""
+    kubo_label = f"{kubo[:12]}…" if kubo else "unknown blox"
+    return f"diagnostics — {kubo_label} @ {gen}"[:1024]
 
 
 _sweep_counter = 0

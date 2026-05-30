@@ -33,7 +33,7 @@ logger = logging.getLogger("blox-ai-intake.issue_db")
 
 
 VALID_STATUSES = ("new", "reviewed", "fixed", "dismissed")
-VALID_SOURCES = ("transcript", "admin")
+VALID_SOURCES = ("transcript", "admin", "diagnostics")
 
 
 def _utcnow_iso() -> str:
@@ -128,16 +128,23 @@ def _upsert_transcript_issue_inner(
     storage_key: str,
     summary: Optional[str],
     now: str,
+    source: str = "transcript",
 ) -> bool:
     """Inner upsert WITHOUT transaction control. Used by the public
-    function (which wraps in BEGIN/COMMIT) and by background_migration
-    (which batches many of these inside one transaction)."""
+    functions (which wrap in BEGIN/COMMIT) and by background_migration
+    (which batches many of these inside one transaction).
+
+    `source` defaults to 'transcript' so background_migration keeps
+    labelling files it scans as transcripts. Diagnostics intake passes
+    source='diagnostics'; the ON CONFLICT(id) DO NOTHING below protects
+    that label on restart (the migration's later insert is a no-op for an
+    already-present row)."""
     cur = conn.execute(
         "INSERT INTO issues (id, source, status, created_at, updated_at, "
         "storage_key, summary) "
-        "VALUES (?, 'transcript', 'new', ?, ?, ?, ?) "
+        "VALUES (?, ?, 'new', ?, ?, ?, ?) "
         "ON CONFLICT(id) DO NOTHING",
-        (upload_id, now, now, storage_key, summary),
+        (upload_id, source, now, now, storage_key, summary),
     )
     inserted = cur.rowcount > 0
     if inserted:
@@ -169,6 +176,35 @@ def upsert_transcript_issue(
     try:
         inserted = _upsert_transcript_issue_inner(
             conn, upload_id, storage_key, summary, now,
+        )
+        _commit(conn)
+        return inserted
+    except Exception:
+        _rollback(conn)
+        raise
+
+
+def upsert_diagnostics_issue(
+    conn: sqlite3.Connection,
+    upload_id: str,
+    storage_key: str,
+    summary: Optional[str] = None,
+    created_at: Optional[str] = None,
+) -> bool:
+    """Insert a new diagnostics-issue if it doesn't already exist.
+
+    Same idempotent file-backed shape as upsert_transcript_issue, but the
+    row is labelled source='diagnostics' so the admin inbox can tell a
+    user-shared diagnostics bundle apart from an AI training transcript.
+    Returns True if a row was actually inserted. Atomic via BEGIN IMMEDIATE.
+    """
+    if not _looks_like_uuid(upload_id):
+        raise ValueError("upload_id must look like a UUID")
+    now = created_at or _utcnow_iso()
+    _begin_immediate(conn)
+    try:
+        inserted = _upsert_transcript_issue_inner(
+            conn, upload_id, storage_key, summary, now, source="diagnostics",
         )
         _commit(conn)
         return inserted

@@ -209,12 +209,14 @@ def make_admin_router(get_db, get_storage, ui_html_path: Path) -> APIRouter:
         if issue is None:
             raise HTTPException(status_code=404,
                                 detail={"error": "not_found"})
-        # Inline the transcript payload so the UI / operator-script can
-        # consume the whole thing in one round trip.
+        # Inline the payload so the UI / operator-script can consume the
+        # whole thing in one round trip. Key off the populated column, not
+        # the source label: file-backed sources (transcript, diagnostics)
+        # carry a storage_key; admin-filed issues carry inline payload_json.
         payload = None
-        if issue["source"] == "transcript" and issue["storage_key"]:
+        if issue["storage_key"]:
             payload = _read_transcript(get_storage(), issue["storage_key"])
-        elif issue["source"] == "admin" and issue["payload_json"]:
+        elif issue["payload_json"]:
             try:
                 payload = json.loads(issue["payload_json"])
             except json.JSONDecodeError:
@@ -303,7 +305,7 @@ def make_admin_router(get_db, get_storage, ui_html_path: Path) -> APIRouter:
         if issue is None:
             raise HTTPException(status_code=404,
                                 detail={"error": "not_found"})
-        if issue["source"] == "transcript" and issue["storage_key"]:
+        if issue["storage_key"]:
             storage = get_storage()
             fpath = _safe_storage_path(storage, issue["storage_key"])
             if fpath is not None:
